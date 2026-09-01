@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}일별 대시보드 — 쿠팡 순이익{% endblock %}
+{% block nav_dashboard %}font-semibold text-blue-600{% endblock %}
+
+{% block content %}
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+    <h1 class="text-xl font-bold text-gray-900">일별 대시보드</h1>
+    <div class="flex items-center gap-2">
+        <label for="date-picker" class="text-sm text-gray-600">날짜:</label>
+        {% if dates %}
+        <select id="date-picker" onchange="location.href='/?date='+this.value"
+                class="border border-gray-300 rounded-md px-3 py-1.5 text-sm bg-white">
+            {% for d in dates %}
+            <option value="{{ d }}" {% if d == selected_date %}selected{% endif %}>{{ d }}</option>
+            {% endfor %}
+        </select>
+        {% else %}
+        <input type="date" id="date-picker" value="{{ selected_date or '' }}"
+               onchange="location.href='/?date='+this.value"
+               class="border border-gray-300 rounded-md px-3 py-1.5 text-sm">
+        {% endif %}
+    </div>
+</div>
+
+{% if not rows %}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+    <div class="text-gray-400 text-4xl mb-3">📊</div>
+    <p class="text-gray-500 text-lg mb-2">
+        {% if selected_date %}
+        {{ selected_date }} 데이터가 없습니다
+        {% else %}
+        아직 판매 데이터가 없습니다
+        {% endif %}
+    </p>
+    <p class="text-gray-400 text-sm">쿠팡 API 연동 또는 엑셀 업로드 후 데이터가 표시됩니다</p>
+</div>
+{% else %}
+
+{# ── PC 테이블 (≥1024px) ── #}
+<div class="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+    <table class="w-full text-sm" id="dashboard-table">
+        <thead class="bg-gray-50 border-b border-gray-200">
+            <tr>
+                <th class="px-3 py-2.5 text-left font-medium text-gray-600 cursor-pointer" data-sort="string">상품명</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">판매량</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">광고판매</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">자연판매</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">총조회수</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">광고클릭수</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">자연조회수</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">전환율(%)</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">광고비</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">개당순마진</th>
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">일순이익</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-100">
+            {% for r in rows %}
+            <tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='/product/{{ r.vendor_item_id }}'">
+                <td class="px-3 py-2 font-medium text-gray-900">{{ r.display_name }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.units_sold|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.ad_units|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.organic_units|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.total_views|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.ad_clicks|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.organic_views|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.conversion_rate|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.ad_spend|fmt }}</td>
+                <td class="px-3 py-2 text-right text-gray-700">{{ r.unit_margin|fmt }}</td>
+                <td class="px-3 py-2 text-right font-semibold {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}text-gray-900{% endif %}">
+                    {{ r.net_profit|fmt }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        {% if totals %}
+        <tfoot class="bg-blue-50 border-t-2 border-blue-200 font-semibold">
+            <tr>
+                <td class="px-3 py-2 text-gray-900">합계</td>
+                <td class="px-3 py-2 text-right">{{ totals.units_sold|fmt }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.ad_units|fmt }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.organic_units|fmt }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.total_views|fmt }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.ad_clicks|fmt }}</td>
+                <td class="px-3 py-2 text-right">{{ totals.organic_views|fmt }}</td>
+                <td class="px-3 py-2 text-right">-</td>
+                <td class="px-3 py-2 text-right">{{ totals.ad_spend|fmt }}</td>
+                <td class="px-3 py-2 text-right">-</td>
+                <td class="px-3 py-2 text-right {% if totals.net_profit < 0 %}num-negative{% else %}text-blue-700{% endif %}">
+                    {{ totals.net_profit|fmt }}
+                </td>
+            </tr>
+        </tfoot>
+        {% endif %}
+    </table>
+</div>
+
+{# ── 모바일 카드 (<1024px) ── #}
+<div class="lg:hidden space-y-2">
+    {% if totals %}
+    <div class="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
+        <div class="flex justify-between items-center">
+            <span class="text-sm font-medium text-blue-800">전체 합계</span>
+            <span class="text-lg font-bold {% if totals.net_profit < 0 %}num-negative{% else %}text-blue-700{% endif %}">
+                {{ totals.net_profit|fmt }}원
+            </span>
+        </div>
+        <div class="text-xs text-blue-600 mt-1">판매 {{ totals.units_sold|fmt }}개 · 광고비 {{ totals.ad_spend|fmt }}원</div>
+    </div>
+    {% endif %}
+
+    {% for r in rows %}
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-3 flex items-center justify-between cursor-pointer" onclick="toggleCard(this)">
+            <div class="flex-1 min-w-0">
+                <a href="/product/{{ r.vendor_item_id }}" class="font-medium text-gray-900 hover:text-blue-600 text-sm block truncate"
+                   onclick="event.stopPropagation()">{{ r.display_name }}</a>
+                <div class="flex gap-4 mt-1 text-xs text-gray-500">
+                    <span>판매 {{ r.units_sold|fmt }}</span>
+                    <span>마진 {{ r.unit_margin|fmt }}</span>
+                </div>
+            </div>
+            <div class="text-right ml-3 flex-shrink-0">
+                <div class="text-sm font-semibold {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}text-gray-900{% endif %}">
+                    {{ r.net_profit|fmt }}
+                </div>
+                <svg class="w-4 h-4 text-gray-400 mx-auto mt-1 transition-transform card-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </div>
+        </div>
+        <div class="hidden border-t border-gray-100 px-3 py-2 bg-gray-50 text-xs card-detail">
+            <div class="grid grid-cols-2 gap-y-1.5 gap-x-4">
+                <div class="flex justify-between"><span class="text-gray-500">광고판매</span><span>{{ r.ad_units|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">자연판매</span><span>{{ r.organic_units|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">총조회수</span><span>{{ r.total_views|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">광고클릭수</span><span>{{ r.ad_clicks|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">자연조회수</span><span>{{ r.organic_views|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">전환율</span><span>{{ r.conversion_rate|fmt }}%</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">광고비</span><span>{{ r.ad_spend|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">개당순마진</span><span>{{ r.unit_margin|fmt }}</span></div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

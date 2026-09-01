@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}쿠팡 순이익 대시보드{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .num-negative { color: #dc2626; font-weight: 600; }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <nav class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6">
+            <div class="flex justify-between h-14 items-center">
+                <a href="/" class="text-lg font-bold text-gray-900">별오점 순이익</a>
+                <div class="flex gap-4 text-sm">
+                    <a href="/" class="text-gray-600 hover:text-gray-900 {% block nav_dashboard %}{% endblock %}">대시보드</a>
+                    <a href="/costs" class="text-gray-600 hover:text-gray-900 {% block nav_costs %}{% endblock %}">원가 관리</a>
+                    <a href="/upload" class="text-gray-600 hover:text-gray-900 {% block nav_upload %}{% endblock %}">데이터 업로드</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="/static/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,224 @@
+{% extends "base.html" %}
+{% block title %}원가 관리 — 쿠팡 순이익{% endblock %}
+{% block nav_costs %}font-semibold text-blue-600{% endblock %}
+
+{% block content %}
+<h1 class="text-xl font-bold text-gray-900 mb-6">원가 관리</h1>
+
+<div class="flex flex-col lg:flex-row gap-6">
+    {# ── 상품 목록 ── #}
+    <div class="lg:w-72 flex-shrink-0">
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div class="p-3 border-b border-gray-200">
+                <input type="text" id="product-search" placeholder="상품 검색..."
+                       class="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+                       oninput="filterProducts(this.value)">
+            </div>
+            <div class="max-h-[60vh] overflow-y-auto divide-y divide-gray-100" id="product-list">
+                {% for p in products %}
+                <a href="/costs?vid={{ p.vendor_item_id }}"
+                   class="block px-3 py-2 text-sm hover:bg-gray-50 product-item
+                          {% if p.vendor_item_id == selected_vid %}bg-blue-50 border-l-2 border-blue-500{% endif %}">
+                    <div class="font-medium text-gray-900">{{ p.display_name }}</div>
+                    <div class="text-xs text-gray-400">이력 {{ p.cost_count }}건</div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {# ── 원가 상세 ── #}
+    <div class="flex-1 min-w-0">
+        {% if selected_product %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+            <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-900">{{ selected_product.display_name }}</h2>
+                <button onclick="showAddForm()" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">
+                    + 원가 추가
+                </button>
+            </div>
+
+            {# 추가 폼 (숨김) #}
+            <div id="add-form" class="hidden border-b border-gray-200 p-4 bg-gray-50">
+                <h3 class="text-sm font-semibold text-gray-700 mb-3">새 원가 등록</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">적용시작일 *</label>
+                        <input type="date" id="f-effective-from" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">판매가 *</label>
+                        <input type="number" id="f-sale-price" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="previewMargin()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">위안단가</label>
+                        <input type="number" step="0.01" id="f-cost-fx" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="calcPurchaseCost()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">환율</label>
+                        <input type="number" step="0.01" id="f-fx-rate" value="330" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="calcPurchaseCost()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">매입원가(원화) *</label>
+                        <input type="number" id="f-purchase-cost" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="previewMargin()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">판매수수료</label>
+                        <input type="number" id="f-commission" value="0" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="previewMargin()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">입출고수수료</label>
+                        <input type="number" id="f-fulfillment" value="0" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="previewMargin()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">기타비용</label>
+                        <input type="number" id="f-other" value="0" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm" oninput="previewMargin()">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-600 mb-1">메모</label>
+                        <input type="text" id="f-memo" class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm">
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                    <div class="text-sm">
+                        개당순마진: <span id="margin-preview" class="font-bold text-blue-700">-</span>원
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="hideAddForm()" class="px-4 py-1.5 rounded text-sm border border-gray-300 hover:bg-gray-100">취소</button>
+                        <button onclick="submitCost()" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">저장</button>
+                    </div>
+                </div>
+            </div>
+
+            {# 원가 이력 테이블 #}
+            {% if costs %}
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-3 py-2 text-left text-gray-600">적용시작일</th>
+                            <th class="px-3 py-2 text-right text-gray-600">판매가</th>
+                            <th class="px-3 py-2 text-right text-gray-600">매입원가</th>
+                            <th class="px-3 py-2 text-right text-gray-600">판매수수료</th>
+                            <th class="px-3 py-2 text-right text-gray-600">입출고</th>
+                            <th class="px-3 py-2 text-right text-gray-600">기타</th>
+                            <th class="px-3 py-2 text-right text-gray-600 font-semibold">개당순마진</th>
+                            <th class="px-3 py-2 text-center text-gray-600">작업</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        {% for c in costs %}
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-3 py-2 text-gray-900">{{ c.effective_from }}</td>
+                            <td class="px-3 py-2 text-right">{{ c.sale_price|fmt }}</td>
+                            <td class="px-3 py-2 text-right">{{ c.purchase_cost|fmt }}</td>
+                            <td class="px-3 py-2 text-right">{{ c.commission_fee|fmt }}</td>
+                            <td class="px-3 py-2 text-right">{{ c.fulfillment_fee|fmt }}</td>
+                            <td class="px-3 py-2 text-right">{{ c.other_unit_cost|fmt }}</td>
+                            <td class="px-3 py-2 text-right font-semibold {% if c.unit_margin is not none and c.unit_margin < 0 %}num-negative{% endif %}">
+                                {{ c.unit_margin|fmt }}
+                            </td>
+                            <td class="px-3 py-2 text-center">
+                                <button onclick="deleteCost({{ c.id }})" class="text-red-500 hover:text-red-700 text-xs">삭제</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="p-8 text-center text-gray-400">원가 이력이 없습니다</div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
+            <p class="text-gray-400">좌측에서 상품을 선택하세요</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SELECTED_VID = {{ selected_vid or 'null' }};
+
+function filterProducts(q) {
+    const items = document.querySelectorAll('.product-item');
+    const lower = q.toLowerCase();
+    items.forEach(el => {
+        const name = el.querySelector('.font-medium').textContent.toLowerCase();
+        el.style.display = name.includes(lower) ? '' : 'none';
+    });
+}
+
+function showAddForm() {
+    document.getElementById('add-form').classList.remove('hidden');
+}
+function hideAddForm() {
+    document.getElementById('add-form').classList.add('hidden');
+}
+
+function calcPurchaseCost() {
+    const fx = parseFloat(document.getElementById('f-cost-fx').value) || 0;
+    const rate = parseFloat(document.getElementById('f-fx-rate').value) || 0;
+    if (fx > 0 && rate > 0) {
+        document.getElementById('f-purchase-cost').value = Math.round(fx * rate);
+    }
+    previewMargin();
+}
+
+function previewMargin() {
+    const sp = parseFloat(document.getElementById('f-sale-price').value) || 0;
+    const pc = parseFloat(document.getElementById('f-purchase-cost').value) || 0;
+    const cm = parseFloat(document.getElementById('f-commission').value) || 0;
+    const ff = parseFloat(document.getElementById('f-fulfillment').value) || 0;
+    const ot = parseFloat(document.getElementById('f-other').value) || 0;
+    const margin = sp - pc - cm - ff - ot;
+    const el = document.getElementById('margin-preview');
+    el.textContent = margin.toLocaleString();
+    el.className = margin < 0 ? 'font-bold text-red-600' : 'font-bold text-blue-700';
+}
+
+async function submitCost() {
+    const data = {
+        vendor_item_id: SELECTED_VID,
+        effective_from: document.getElementById('f-effective-from').value,
+        sale_price: parseFloat(document.getElementById('f-sale-price').value),
+        purchase_cost: parseFloat(document.getElementById('f-purchase-cost').value),
+        commission_fee: parseFloat(document.getElementById('f-commission').value) || 0,
+        fulfillment_fee: parseFloat(document.getElementById('f-fulfillment').value) || 0,
+        other_unit_cost: parseFloat(document.getElementById('f-other').value) || 0,
+        purchase_cost_fx: document.getElementById('f-cost-fx').value || null,
+        fx_rate: document.getElementById('f-fx-rate').value || null,
+        memo: document.getElementById('f-memo').value || null,
+    };
+    if (!data.effective_from || !data.sale_price || !data.purchase_cost) {
+        alert('적용시작일, 판매가, 매입원가는 필수입니다.');
+        return;
+    }
+    const res = await fetch('/api/costs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+    });
+    if (res.ok) {
+        location.reload();
+    } else {
+        const err = await res.json();
+        alert('오류: ' + (err.detail || '저장 실패'));
+    }
+}
+
+async function deleteCost(costId) {
+    if (!confirm('이 원가 이력을 삭제하시겠습니까?')) return;
+    const res = await fetch('/api/costs/' + costId, { method: 'DELETE' });
+    if (res.ok) {
+        location.reload();
+    } else {
+        alert('삭제 실패');
+    }
+}
+</script>
+{% endblock %}

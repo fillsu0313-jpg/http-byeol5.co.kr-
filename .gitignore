@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# DB
+data/coupang.db
+data/coupang.db-wal
+data/coupang.db-shm
+
+# Config (API keys)
+config.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Claude Code
+.claude/
+CLAUDE.md
+
+# Keys
+*.pem
+.pem/
+
+# Data files (large)
+*.xlsx
+*.zip
+
+# Temp
+*.tmp
+~$*
