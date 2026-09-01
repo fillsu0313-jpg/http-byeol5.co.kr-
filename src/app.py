@@ -55,8 +55,7 @@ async def dashboard(request: Request, date: Optional[str] = None):
             if r.get(k) is not None:
                 totals[k] += r[k]
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "dates": dates,
         "selected_date": selected,
         "rows": rows,
@@ -71,8 +70,7 @@ async def product_detail(request: Request, vendor_item_id: int):
         raise HTTPException(status_code=404, detail="상품을 찾을 수 없습니다")
     costs = db.get_product_costs(vendor_item_id)
     daily = db.get_product_daily(vendor_item_id)
-    return templates.TemplateResponse("product_detail.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "product_detail.html", {
         "product": product,
         "costs": costs,
         "daily": daily,
@@ -82,8 +80,7 @@ async def product_detail(request: Request, vendor_item_id: int):
 @app.get("/upload", response_class=HTMLResponse)
 async def upload_page(request: Request):
     logs = db.get_ingest_logs("ads", limit=10)
-    return templates.TemplateResponse("upload.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "upload.html", {
         "logs": logs,
     })
 
@@ -137,8 +134,7 @@ async def cost_manage(request: Request, vid: Optional[int] = None):
     selected_product = None
     if selected_vid:
         selected_product = db.get_product(selected_vid)
-    return templates.TemplateResponse("cost_manage.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "cost_manage.html", {
         "products": products,
         "selected_vid": selected_vid,
         "selected_product": selected_product,
