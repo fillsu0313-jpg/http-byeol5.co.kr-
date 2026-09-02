@@ -232,7 +232,7 @@ async def upload_costs(file: UploadFile = File(...)):
 
 @app.get("/costs", response_class=HTMLResponse)
 async def cost_manage(request: Request, vid: Optional[int] = None):
-    products = db.get_products()
+    products = db.get_products_with_cost_status()
     selected_vid = vid if vid else (products[0]["vendor_item_id"] if products else None)
     costs = db.get_product_costs(selected_vid) if selected_vid else []
     selected_product = None

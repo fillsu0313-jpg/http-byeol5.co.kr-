@@ -33,6 +33,8 @@ def collect_sales(
 
     # vendorItemId + 날짜별 집계
     daily = defaultdict(lambda: {"units_sold": 0, "gross_revenue": 0.0})
+    # vendorItemId별 최신 판매가/수수료 추적
+    api_prices: dict[int, dict] = {}
     for item in items:
         vid = item.get("vendorItemId")
         # 날짜 형식: API에서 YYYY-MM-DD 또는 timestamp
@@ -44,6 +46,18 @@ def collect_sales(
         key = (stat_date, vid)
         daily[key]["units_sold"] += int(item.get("quantity", 0))
         daily[key]["gross_revenue"] += float(item.get("revenue", 0))
+
+        # 판매가·수수료: 가장 최근 날짜 기준으로 저장
+        sale_price = item.get("salePrice")
+        service_fee = item.get("serviceFee")
+        if sale_price is not None:
+            prev = api_prices.get(vid)
+            if prev is None or stat_date >= prev["date"]:
+                api_prices[vid] = {
+                    "date": stat_date,
+                    "sale_price": float(sale_price),
+                    "commission_fee": float(service_fee) if service_fee else 0.0,
+                }
 
     with get_db() as conn:
         for (stat_date, vid), vals in daily.items():
@@ -63,6 +77,19 @@ def collect_sales(
                 (stat_date, vid, vals["units_sold"], vals["gross_revenue"]),
             )
             result["inserted"] += 1
+
+        # API에서 가져온 판매가·수수료를 products 테이블에 저장
+        prices_updated = 0
+        for vid, pinfo in api_prices.items():
+            conn.execute(
+                """UPDATE products
+                   SET api_sale_price = ?, api_commission_fee = ?
+                   WHERE vendor_item_id = ?""",
+                (pinfo["sale_price"], pinfo["commission_fee"], vid),
+            )
+            prices_updated += 1
+        if prices_updated:
+            result["prices_updated"] = prices_updated
 
     _log_ingest(
         date_from, "sales", "api",

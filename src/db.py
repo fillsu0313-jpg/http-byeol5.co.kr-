@@ -15,7 +15,24 @@ def get_conn() -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    _migrate(conn)
     return conn
+
+
+_migrated = False
+
+def _migrate(conn: sqlite3.Connection):
+    """필요한 스키마 마이그레이션 (한 번만 실행)"""
+    global _migrated
+    if _migrated:
+        return
+    # products 테이블에 API 가격 컬럼 추가
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(products)").fetchall()}
+    if "api_sale_price" not in cols:
+        conn.execute("ALTER TABLE products ADD COLUMN api_sale_price REAL")
+    if "api_commission_fee" not in cols:
+        conn.execute("ALTER TABLE products ADD COLUMN api_commission_fee REAL")
+    _migrated = True
 
 
 @contextmanager
@@ -121,6 +138,22 @@ def get_product(vendor_item_id: int) -> Optional[dict]:
             "SELECT * FROM products WHERE vendor_item_id = ?", (vendor_item_id,)
         ).fetchone()
         return dict(row) if row else None
+
+
+def get_products_with_cost_status() -> list[dict]:
+    """상품 목록 + 원가 등록 여부 + API 가격 정보"""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT p.vendor_item_id, p.display_name, p.is_active,
+                      p.api_sale_price, p.api_commission_fee,
+                      COUNT(c.id) as cost_count,
+                      CASE WHEN COUNT(c.id) > 0 THEN 1 ELSE 0 END as has_cost
+               FROM products p
+               LEFT JOIN product_costs c ON c.vendor_item_id = p.vendor_item_id
+               GROUP BY p.vendor_item_id
+               ORDER BY p.display_name"""
+        ).fetchall()
+        return [dict(r) for r in rows]
 
 
 def get_product_costs(vendor_item_id: int) -> list[dict]:
