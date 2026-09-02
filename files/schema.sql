@@ -67,7 +67,7 @@ CREATE TABLE daily_sales (
 -- ─────────────────────────────────────────────
 CREATE TABLE daily_ads (
     stat_date      DATE   NOT NULL,
-    vendor_item_id BIGINT NOT NULL REFERENCES products(vendor_item_id),
+    vendor_item_id BIGINT NOT NULL,
     impressions    INTEGER,                    -- 노출수
     ad_clicks      INTEGER,                    -- 광고 클릭수
     ad_units       INTEGER,                    -- 광고 판매량

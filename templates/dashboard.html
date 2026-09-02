@@ -52,6 +52,9 @@
                 <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">광고비</th>
                 <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">개당순마진</th>
                 <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">일순이익</th>
+                {% if prev_date %}
+                <th class="px-3 py-2.5 text-right font-medium text-gray-600 cursor-pointer" data-sort="number">전일비</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody class="divide-y divide-gray-100">
@@ -70,6 +73,18 @@
                 <td class="px-3 py-2 text-right font-semibold {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}text-gray-900{% endif %}">
                     {{ r.net_profit|fmt }}
                 </td>
+                {% if prev_date %}
+                <td class="px-3 py-2 text-right text-xs font-medium
+                    {% if r.profit_change is not none and r.profit_change > 0 %}text-green-600
+                    {% elif r.profit_change is not none and r.profit_change < 0 %}text-red-500
+                    {% else %}text-gray-400{% endif %}">
+                    {% if r.profit_change is not none %}
+                        {% if r.profit_change > 0 %}+{{ r.profit_change|fmt }}
+                        {% elif r.profit_change < 0 %}{{ r.profit_change|fmt }}
+                        {% else %}-{% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                {% endif %}
             </tr>
             {% endfor %}
         </tbody>
@@ -89,6 +104,18 @@
                 <td class="px-3 py-2 text-right {% if totals.net_profit < 0 %}num-negative{% else %}text-blue-700{% endif %}">
                     {{ totals.net_profit|fmt }}
                 </td>
+                {% if prev_date %}
+                <td class="px-3 py-2 text-right text-xs font-medium
+                    {% if totals.profit_change is not none and totals.profit_change > 0 %}text-green-600
+                    {% elif totals.profit_change is not none and totals.profit_change < 0 %}text-red-500
+                    {% else %}text-gray-400{% endif %}">
+                    {% if totals.profit_change is not none %}
+                        {% if totals.profit_change > 0 %}+{{ totals.profit_change|fmt }}
+                        {% elif totals.profit_change < 0 %}{{ totals.profit_change|fmt }}
+                        {% else %}-{% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                {% endif %}
             </tr>
         </tfoot>
         {% endif %}
@@ -124,9 +151,15 @@
                 <div class="text-sm font-semibold {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}text-gray-900{% endif %}">
                     {{ r.net_profit|fmt }}
                 </div>
+                {% if r.profit_change is not none %}
+                <div class="text-xs {% if r.profit_change > 0 %}text-green-600{% elif r.profit_change < 0 %}text-red-500{% else %}text-gray-400{% endif %}">
+                    {% if r.profit_change > 0 %}+{{ r.profit_change|fmt }}{% elif r.profit_change < 0 %}{{ r.profit_change|fmt }}{% else %}-{% endif %}
+                </div>
+                {% else %}
                 <svg class="w-4 h-4 text-gray-400 mx-auto mt-1 transition-transform card-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
+                {% endif %}
             </div>
         </div>
         <div class="hidden border-t border-gray-100 px-3 py-2 bg-gray-50 text-xs card-detail">

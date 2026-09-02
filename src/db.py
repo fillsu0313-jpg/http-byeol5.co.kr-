@@ -85,6 +85,22 @@ def get_daily_profit(stat_date: str) -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_prev_date(stat_date: str) -> Optional[str]:
+    """주어진 날짜의 직전 데이터 존재 날짜"""
+    with get_db() as conn:
+        row = conn.execute(
+            "SELECT MAX(stat_date) FROM daily_sales WHERE stat_date < ?",
+            (stat_date,),
+        ).fetchone()
+        return row[0] if row and row[0] else None
+
+
+def get_daily_profit_map(stat_date: str) -> dict[int, dict]:
+    """v_daily_profit 결과를 vendor_item_id → dict 맵으로 반환"""
+    rows = get_daily_profit(stat_date)
+    return {r["vendor_item_id"]: r for r in rows}
+
+
 def get_products() -> list[dict]:
     """상품 목록 (원가이력 수 포함)"""
     with get_db() as conn:

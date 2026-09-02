@@ -42,6 +42,19 @@ async def dashboard(request: Request, date: Optional[str] = None):
     selected = date if date else (dates[0] if dates else None)
     rows = db.get_daily_profit(selected) if selected else []
 
+    # 전일 대비 변화 계산
+    prev_date = db.get_prev_date(selected) if selected else None
+    prev_map = db.get_daily_profit_map(prev_date) if prev_date else {}
+    for r in rows:
+        vid = r["vendor_item_id"]
+        prev = prev_map.get(vid)
+        if prev and r.get("net_profit") is not None and prev.get("net_profit") is not None:
+            r["prev_profit"] = prev["net_profit"]
+            r["profit_change"] = r["net_profit"] - prev["net_profit"]
+        else:
+            r["prev_profit"] = None
+            r["profit_change"] = None
+
     # 합계 계산
     totals = {
         "units_sold": 0, "ad_units": 0, "organic_units": 0,
@@ -55,9 +68,14 @@ async def dashboard(request: Request, date: Optional[str] = None):
             if r.get(k) is not None:
                 totals[k] += r[k]
 
+    # 합계 전일 대비
+    prev_total = sum(p.get("net_profit", 0) or 0 for p in prev_map.values())
+    totals["profit_change"] = totals["net_profit"] - prev_total if prev_map else None
+
     return templates.TemplateResponse(request, "dashboard.html", {
         "dates": dates,
         "selected_date": selected,
+        "prev_date": prev_date,
         "rows": rows,
         "totals": totals if has_data else None,
     })
