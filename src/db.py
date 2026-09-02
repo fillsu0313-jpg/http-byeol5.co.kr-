@@ -217,6 +217,63 @@ def get_ingest_logs(data_type: Optional[str] = None, limit: int = 20) -> list[di
         return [dict(r) for r in rows]
 
 
+# ──────────────── 변경 메모 (change_notes) ────────────────
+
+def get_change_notes(vendor_item_id: int) -> list[dict]:
+    """변경 메모 조회 (내림차순)"""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT id, note_date, change_type, note, created_at
+               FROM change_notes
+               WHERE vendor_item_id = ?
+               ORDER BY note_date DESC, id DESC""",
+            (vendor_item_id,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def add_change_note(vendor_item_id: int, note_date: str, change_type: str, note: str) -> int:
+    with get_db() as conn:
+        cur = conn.execute(
+            """INSERT INTO change_notes (vendor_item_id, note_date, change_type, note)
+               VALUES (?, ?, ?, ?)""",
+            (vendor_item_id, note_date, change_type, note),
+        )
+        return cur.lastrowid
+
+
+def delete_change_note(note_id: int) -> bool:
+    with get_db() as conn:
+        cur = conn.execute("DELETE FROM change_notes WHERE id=?", (note_id,))
+        return cur.rowcount > 0
+
+
+# ──────────────── 데이터 수집 상태 ────────────────
+
+def get_collection_status() -> dict:
+    """최근 수집 상태 요약"""
+    with get_db() as conn:
+        latest_sales = conn.execute(
+            "SELECT MAX(stat_date) FROM daily_sales"
+        ).fetchone()[0]
+        latest_ads = conn.execute(
+            "SELECT MAX(stat_date) FROM daily_ads"
+        ).fetchone()[0]
+        latest_log = conn.execute(
+            "SELECT ran_at, status, message FROM ingest_log ORDER BY ran_at DESC LIMIT 1"
+        ).fetchone()
+        sales_count = conn.execute(
+            "SELECT COUNT(DISTINCT vendor_item_id) FROM daily_sales WHERE stat_date = ?",
+            (latest_sales,) if latest_sales else ("",),
+        ).fetchone()[0]
+        return {
+            "latest_sales": latest_sales,
+            "latest_ads": latest_ads,
+            "latest_log": dict(latest_log) if latest_log else None,
+            "latest_sales_products": sales_count,
+        }
+
+
 def get_product_daily(vendor_item_id: int, from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
     """상품별 일별 데이터 (차트용 필드 포함)"""
     query = """

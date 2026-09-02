@@ -12,13 +12,31 @@
 
 {# ── 상품 기본 정보 ── #}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-    <h1 class="text-xl font-bold text-gray-900 mb-2">{{ product.display_name }}</h1>
-    <div class="text-sm text-gray-500 space-y-1">
-        <div>vendorItemId: <span class="font-mono text-gray-700">{{ product.vendor_item_id }}</span></div>
-        {% if product.coupang_name and product.coupang_name != product.display_name %}
-        <div>쿠팡 상품명: {{ product.coupang_name }}</div>
-        {% endif %}
-        <div>상태: {% if product.is_active %}<span class="text-green-600">활성</span>{% else %}<span class="text-gray-400">비활성</span>{% endif %}</div>
+    <div class="flex items-start justify-between">
+        <div>
+            <h1 class="text-xl font-bold text-gray-900 mb-2">{{ product.display_name }}</h1>
+            <div class="text-sm text-gray-500 space-y-1">
+                <div>vendorItemId: <span class="font-mono text-gray-700">{{ product.vendor_item_id }}</span></div>
+                {% if product.coupang_name and product.coupang_name != product.display_name %}
+                <div>쿠팡 상품명: {{ product.coupang_name }}</div>
+                {% endif %}
+                <div>상태: {% if product.is_active %}<span class="text-green-600">활성</span>{% else %}<span class="text-gray-400">비활성</span>{% endif %}</div>
+            </div>
+        </div>
+        <div class="flex gap-2 flex-shrink-0 ml-4">
+            {% if coupang_link %}
+            <a href="{{ coupang_link }}" target="_blank"
+               class="px-3 py-1.5 bg-red-500 text-white text-xs rounded hover:bg-red-600">
+                쿠팡 링크
+            </a>
+            {% endif %}
+            {% if daily %}
+            <a href="/download/product/{{ product.vendor_item_id }}{% if from_date %}?from_date={{ from_date }}&to_date={{ to_date }}{% endif %}"
+               class="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700">
+                엑셀 다운로드
+            </a>
+            {% endif %}
+        </div>
     </div>
 </div>
 
@@ -140,6 +158,53 @@
     </div>
 </div>
 {% endif %}
+
+{# ── 변경 메모 ── #}
+<div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
+    <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+        <h2 class="font-semibold text-gray-900">변경 메모</h2>
+        <button onclick="document.getElementById('noteForm').classList.toggle('hidden')"
+                class="text-sm text-blue-600 hover:underline">+ 메모 추가</button>
+    </div>
+    <div id="noteForm" class="hidden p-4 border-b border-gray-200 bg-gray-50">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+            <input type="date" id="noteDate" class="border rounded px-2 py-1.5 text-sm"
+                   value="{{ daily[0].stat_date if daily else '' }}">
+            <select id="noteType" class="border rounded px-2 py-1.5 text-sm">
+                <option value="가격">가격 변경</option>
+                <option value="광고">광고 변경</option>
+                <option value="상세페이지">상세페이지</option>
+                <option value="기타">기타</option>
+            </select>
+            <input type="text" id="noteText" placeholder="메모 내용" class="border rounded px-2 py-1.5 text-sm sm:col-span-2">
+        </div>
+        <button onclick="addNote()" class="mt-2 px-4 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">저장</button>
+    </div>
+    <div id="noteList">
+        {% if notes %}
+        <div class="divide-y divide-gray-100">
+            {% for n in notes %}
+            <div class="px-4 py-2 flex items-center justify-between text-sm hover:bg-gray-50">
+                <div>
+                    <span class="px-1.5 py-0.5 rounded text-xs
+                        {% if n.change_type == '가격' %}bg-blue-100 text-blue-700
+                        {% elif n.change_type == '광고' %}bg-orange-100 text-orange-700
+                        {% elif n.change_type == '상세페이지' %}bg-purple-100 text-purple-700
+                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                        {{ n.change_type }}
+                    </span>
+                    <span class="text-gray-500 ml-2">{{ n.note_date }}</span>
+                    <span class="ml-2 text-gray-900">{{ n.note }}</span>
+                </div>
+                <button onclick="deleteNote({{ n.id }})" class="text-gray-400 hover:text-red-500 text-xs ml-2">삭제</button>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-gray-400 text-sm" id="noNotes">메모가 없습니다</div>
+        {% endif %}
+    </div>
+</div>
 
 {# ── 원가 이력 ── #}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
@@ -423,4 +488,29 @@ new Chart(document.getElementById('conversionChart'), {
 });
 </script>
 {% endif %}
+<script>
+const VID = {{ product.vendor_item_id }};
+
+async function addNote() {
+    const date = document.getElementById('noteDate').value;
+    const type = document.getElementById('noteType').value;
+    const text = document.getElementById('noteText').value.trim();
+    if (!date || !text) { alert('날짜와 내용을 입력하세요.'); return; }
+
+    const resp = await fetch('/api/notes', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({vendor_item_id: VID, note_date: date, change_type: type, note: text})
+    });
+    if (resp.ok) { location.reload(); }
+    else { alert('저장 실패'); }
+}
+
+async function deleteNote(id) {
+    if (!confirm('삭제하시겠습니까?')) return;
+    const resp = await fetch('/api/notes/' + id, {method: 'DELETE'});
+    if (resp.ok) { location.reload(); }
+    else { alert('삭제 실패'); }
+}
+</script>
 {% endblock %}

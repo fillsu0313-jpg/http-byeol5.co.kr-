@@ -3,7 +3,7 @@
 {% block nav_dashboard %}font-semibold text-blue-600{% endblock %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-3">
     <h1 class="text-xl font-bold text-gray-900">일별 대시보드</h1>
     <div class="flex items-center gap-2">
         <label for="date-picker" class="text-sm text-gray-600">날짜:</label>
@@ -19,8 +19,32 @@
                onchange="location.href='/?date='+this.value"
                class="border border-gray-300 rounded-md px-3 py-1.5 text-sm">
         {% endif %}
+        {% if rows %}
+        <a href="/download/daily?date={{ selected_date }}"
+           class="px-3 py-1.5 bg-green-600 text-white text-sm rounded hover:bg-green-700">
+            엑셀 다운로드
+        </a>
+        {% endif %}
     </div>
 </div>
+
+{# ── 수집 상태 배너 ── #}
+{% if collection %}
+<div class="mb-4 text-xs flex flex-wrap gap-3 text-gray-500">
+    <span>최근 판매: {{ collection.latest_sales or '없음' }}</span>
+    <span>최근 광고: {{ collection.latest_ads or '없음' }}</span>
+    {% if collection.latest_sales_products %}
+    <span>수집 상품: {{ collection.latest_sales_products }}개</span>
+    {% endif %}
+    {% if collection.latest_log %}
+    <span>마지막 수집: {{ collection.latest_log.ran_at[:16] }}
+        <span class="px-1 py-0.5 rounded {% if collection.latest_log.status == 'ok' %}bg-green-100 text-green-700{% else %}bg-red-100 text-red-700{% endif %}">
+            {{ collection.latest_log.status }}
+        </span>
+    </span>
+    {% endif %}
+</div>
+{% endif %}
 
 {% if not rows %}
 <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
@@ -35,6 +59,48 @@
     <p class="text-gray-400 text-sm">쿠팡 API 연동 또는 엑셀 업로드 후 데이터가 표시됩니다</p>
 </div>
 {% else %}
+
+{# ── 상단 요약 카드 ── #}
+{% if totals %}
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
+    <div class="bg-white rounded-lg shadow-sm border p-3">
+        <div class="text-xs text-gray-500">총 판매량</div>
+        <div class="text-lg font-bold text-gray-900">{{ totals.units_sold|fmt }}개</div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-3">
+        <div class="text-xs text-gray-500">총 광고비 (VAT포함)</div>
+        <div class="text-lg font-bold text-gray-900">{{ (totals.ad_spend * 1.1)|round|fmt }}원</div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-3">
+        <div class="text-xs text-gray-500">총 순이익</div>
+        <div class="text-lg font-bold {% if totals.net_profit < 0 %}num-negative{% else %}text-blue-700{% endif %}">
+            {{ totals.net_profit|round|fmt }}원
+        </div>
+        {% if totals.profit_change is not none %}
+        <div class="text-xs mt-0.5 {% if totals.profit_change > 0 %}text-green-600{% elif totals.profit_change < 0 %}text-red-500{% else %}text-gray-400{% endif %}">
+            전일비 {% if totals.profit_change > 0 %}+{% endif %}{{ totals.profit_change|round|fmt }}
+        </div>
+        {% endif %}
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-3">
+        <div class="text-xs text-gray-500">평균 전환율</div>
+        <div class="text-lg font-bold text-gray-900">
+            {% if totals.avg_conversion is not none %}{{ totals.avg_conversion }}%{% else %}-{% endif %}
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow-sm border p-3">
+        <div class="text-xs text-gray-500">상품 수</div>
+        <div class="text-lg font-bold text-gray-900">{{ rows|length }}개</div>
+    </div>
+</div>
+{% endif %}
+
+{# ── 검색 ── #}
+<div class="mb-3">
+    <input type="text" id="searchInput" placeholder="상품명 검색..."
+           class="w-full sm:w-64 border border-gray-300 rounded-md px-3 py-1.5 text-sm"
+           oninput="filterRows()">
+</div>
 
 {# ── PC 테이블 (≥1024px) ── #}
 <div class="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
@@ -59,7 +125,7 @@
         </thead>
         <tbody class="divide-y divide-gray-100">
             {% for r in rows %}
-            <tr class="hover:bg-gray-50 cursor-pointer" onclick="location.href='/product/{{ r.vendor_item_id }}'">
+            <tr class="hover:bg-gray-50 cursor-pointer data-row" data-name="{{ r.display_name }}" onclick="location.href='/product/{{ r.vendor_item_id }}'">
                 <td class="px-3 py-2 font-medium text-gray-900">{{ r.display_name }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ r.units_sold|fmt }}</td>
                 <td class="px-3 py-2 text-right text-gray-700">{{ r.ad_units|fmt }}</td>
@@ -98,7 +164,7 @@
                 <td class="px-3 py-2 text-right">{{ totals.total_views|fmt }}</td>
                 <td class="px-3 py-2 text-right">{{ totals.ad_clicks|fmt }}</td>
                 <td class="px-3 py-2 text-right">{{ totals.organic_views|fmt }}</td>
-                <td class="px-3 py-2 text-right">-</td>
+                <td class="px-3 py-2 text-right">{% if totals.avg_conversion is not none %}{{ totals.avg_conversion }}%{% else %}-{% endif %}</td>
                 <td class="px-3 py-2 text-right">{{ totals.ad_spend|fmt }}</td>
                 <td class="px-3 py-2 text-right">-</td>
                 <td class="px-3 py-2 text-right {% if totals.net_profit < 0 %}num-negative{% else %}text-blue-700{% endif %}">
@@ -124,6 +190,7 @@
 
 {# ── 모바일 카드 (<1024px) ── #}
 <div class="lg:hidden space-y-2">
+    {# 모바일 검색은 위 input 공유 #}
     {% if totals %}
     <div class="bg-blue-50 rounded-lg p-3 border border-blue-200 mb-4">
         <div class="flex justify-between items-center">
@@ -137,7 +204,7 @@
     {% endif %}
 
     {% for r in rows %}
-    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden mobile-card" data-name="{{ r.display_name }}">
         <div class="p-3 flex items-center justify-between cursor-pointer" onclick="toggleCard(this)">
             <div class="flex-1 min-w-0">
                 <a href="/product/{{ r.vendor_item_id }}" class="font-medium text-gray-900 hover:text-blue-600 text-sm block truncate"
@@ -169,7 +236,7 @@
                 <div class="flex justify-between"><span class="text-gray-500">총조회수</span><span>{{ r.total_views|fmt }}</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">광고클릭수</span><span>{{ r.ad_clicks|fmt }}</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">자연조회수</span><span>{{ r.organic_views|fmt }}</span></div>
-                <div class="flex justify-between"><span class="text-gray-500">전환율</span><span>{{ r.conversion_rate|fmt }}%</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">전환율</span><span>{% if r.conversion_rate is not none %}{{ r.conversion_rate }}%{% else %}-{% endif %}</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">광고비</span><span>{{ r.ad_spend|fmt }}</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">개당순마진</span><span>{{ r.unit_margin|fmt }}</span></div>
             </div>
@@ -178,4 +245,22 @@
     {% endfor %}
 </div>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterRows() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    // PC 테이블
+    document.querySelectorAll('.data-row').forEach(row => {
+        const name = (row.dataset.name || '').toLowerCase();
+        row.style.display = name.includes(q) ? '' : 'none';
+    });
+    // 모바일 카드
+    document.querySelectorAll('.mobile-card').forEach(card => {
+        const name = (card.dataset.name || '').toLowerCase();
+        card.style.display = name.includes(q) ? '' : 'none';
+    });
+}
+</script>
 {% endblock %}

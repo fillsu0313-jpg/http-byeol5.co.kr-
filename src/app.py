@@ -1,9 +1,10 @@
 """
 FastAPI 앱 + 라우터
 """
+import io
 import tempfile
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -68,9 +69,20 @@ async def dashboard(request: Request, date: Optional[str] = None):
             if r.get(k) is not None:
                 totals[k] += r[k]
 
+    # 평균 전환율
+    conv_sum, conv_count = 0.0, 0
+    for r in rows:
+        if r.get("conversion_rate") is not None:
+            conv_sum += r["conversion_rate"]
+            conv_count += 1
+    totals["avg_conversion"] = round(conv_sum / conv_count, 2) if conv_count else None
+
     # 합계 전일 대비
     prev_total = sum(p.get("net_profit", 0) or 0 for p in prev_map.values())
     totals["profit_change"] = totals["net_profit"] - prev_total if prev_map else None
+
+    # 수집 상태
+    collection = db.get_collection_status()
 
     return templates.TemplateResponse(request, "dashboard.html", {
         "dates": dates,
@@ -78,6 +90,7 @@ async def dashboard(request: Request, date: Optional[str] = None):
         "prev_date": prev_date,
         "rows": rows,
         "totals": totals if has_data else None,
+        "collection": collection,
     })
 
 
@@ -106,10 +119,19 @@ async def product_detail(request: Request, vendor_item_id: int,
 
     costs = db.get_product_costs(vendor_item_id)
     daily = db.get_product_daily(vendor_item_id, from_date, to_date)
+    notes = db.get_change_notes(vendor_item_id)
+
+    # 쿠팡 상품 링크 (productId 기반)
+    coupang_link = None
+    if product.get("product_id"):
+        coupang_link = f"https://www.coupang.com/vp/products/{product['product_id']}"
+
     return templates.TemplateResponse(request, "product_detail.html", {
         "product": product,
         "costs": costs,
         "daily": daily,
+        "notes": notes,
+        "coupang_link": coupang_link,
         "period": period or "all",
         "from_date": from_date or "",
         "to_date": to_date or "",
@@ -285,3 +307,104 @@ async def api_delete_cost(cost_id: int):
     if not ok:
         raise HTTPException(404, "원가를 찾을 수 없습니다")
     return JSONResponse(content={"ok": True})
+
+
+# ──────────────── 메모 API ────────────────
+
+@app.post("/api/notes")
+async def api_add_note(request: Request):
+    data = await request.json()
+    for field in ("vendor_item_id", "note_date", "note"):
+        if not data.get(field):
+            raise HTTPException(400, f"필수 필드 누락: {field}")
+    note_id = db.add_change_note(
+        vendor_item_id=int(data["vendor_item_id"]),
+        note_date=data["note_date"],
+        change_type=data.get("change_type", "기타"),
+        note=data["note"],
+    )
+    return JSONResponse(content={"id": note_id, "ok": True})
+
+
+@app.delete("/api/notes/{note_id}")
+async def api_delete_note(note_id: int):
+    ok = db.delete_change_note(note_id)
+    if not ok:
+        raise HTTPException(404, "메모를 찾을 수 없습니다")
+    return JSONResponse(content={"ok": True})
+
+
+# ──────────────── 엑셀 다운로드 ────────────────
+
+@app.get("/download/daily")
+async def download_daily(date: str):
+    """일별 대시보드 엑셀 다운로드"""
+    import openpyxl
+    rows = db.get_daily_profit(date)
+    if not rows:
+        raise HTTPException(404, "데이터가 없습니다")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = date
+    headers = ["상품명", "vendorItemId", "판매량", "광고판매", "자연판매",
+               "총조회수", "광고클릭수", "자연조회수", "전환율(%)",
+               "광고비", "개당순마진", "일순이익"]
+    ws.append(headers)
+    for r in rows:
+        ws.append([
+            r.get("display_name"), r.get("vendor_item_id"),
+            r.get("units_sold"), r.get("ad_units"), r.get("organic_units"),
+            r.get("total_views"), r.get("ad_clicks"), r.get("organic_views"),
+            r.get("conversion_rate"),
+            r.get("ad_spend"), r.get("unit_margin"), r.get("net_profit"),
+        ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"daily_{date}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.get("/download/product/{vendor_item_id}")
+async def download_product(vendor_item_id: int,
+                           from_date: Optional[str] = None,
+                           to_date: Optional[str] = None):
+    """상품별 상세 엑셀 다운로드"""
+    import openpyxl
+    product = db.get_product(vendor_item_id)
+    if not product:
+        raise HTTPException(404, "상품을 찾을 수 없습니다")
+    daily = db.get_product_daily(vendor_item_id, from_date, to_date)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = str(product.get("display_name", ""))[:31]
+    headers = ["날짜", "판매량", "광고판매", "자연판매", "총조회수",
+               "광고클릭수", "자연조회수", "전환율(%)",
+               "광고비", "개당순마진", "일순이익"]
+    ws.append(headers)
+    for d in daily:
+        ws.append([
+            d.get("stat_date"), d.get("units_sold"),
+            d.get("ad_units"), d.get("organic_units"),
+            d.get("total_views"), d.get("ad_clicks"), d.get("organic_views"),
+            d.get("conversion_rate"),
+            d.get("ad_spend"), d.get("unit_margin"), d.get("net_profit"),
+        ])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    name = product.get("display_name", vendor_item_id)
+    filename = f"product_{vendor_item_id}.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
