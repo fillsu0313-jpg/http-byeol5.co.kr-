@@ -11,23 +11,28 @@
 }
 
 :root {
-  /* ── Brand ── */
-  --brand-primary: #1C5BFF;
-  --brand-primary-hover: #3D72FF;
-  --brand-primary-ink: #1543C4;
+  /* ── Brand (대동 디자인 시스템 정본) ── */
+  --daedong-red: #EF4023;
+  --daedong-red-hover: #F05A3E;
+  --daedong-black: #231F20;
+  --daedong-burgundy: #7A262B;
+  --daedong-teal: #6AC8C7;
+  --daedong-blue: #1C5BFF;
+  --daedong-blue-hover: #3D72FF;
+  --daedong-blue-ink: #1543C4;
 
-  /* ── Surface & Text (Light) ── */
-  --bg: #F5F7FA;
+  /* ── Surface & Text (Light — warm tone) ── */
+  --bg: #ECECE8;
   --surface: #FFFFFF;
-  --surface-2: #EFF1F5;
+  --surface-2: #F7F7F5;
   --surface-elevated: #FFFFFF;
-  --border: #E2E5EB;
-  --border-strong: #CDD1D9;
-  --text-primary: #1A1D23;
-  --text-secondary: #4B5563;
-  --text-muted: #94A3B8;
+  --border: #DCDCD7;
+  --border-strong: #C7C7C1;
+  --text-primary: #231F20;
+  --text-secondary: #585958;
+  --text-muted: #8A8A85;
 
-  /* ── Semantic: Status ── */
+  /* ── Semantic: Status (--st-* 정본) ── */
   --st-ok: #1E9E54;
   --st-ok-soft: #DCFCE7;
   --st-caution: #B07A0E;
@@ -37,21 +42,26 @@
   --st-info: #00677B;
   --st-info-soft: #E0EFF1;
 
-  /* ── Accent = Brand Primary (인터랙션) ── */
-  --accent: var(--brand-primary);
-  --accent-hover: var(--brand-primary-hover);
-  --accent-soft: #E9EFFE;
+  /* ── Accent = 대동 레드 (인터랙션·링크·주요 액션) ── */
+  --accent: var(--daedong-red);
+  --accent-hover: #D63418;
+  --accent-soft: #FDEAE6;
 
-  /* ── Focus ring ── */
-  --ring: rgba(28, 91, 255, 0.35);
+  /* ── Selected = 블루 (선택/현재 위치 전용 — 인터랙션에 쓰지 말 것) ── */
+  --selected: var(--daedong-blue);
+  --selected-hover: var(--daedong-blue-hover);
+  --selected-soft: #E9EFFE;
 
-  /* ── Chart ── */
+  /* ── Focus ring (accent 기반, 레드) ── */
+  --ring: rgba(239, 64, 35, 0.40);
+
+  /* ── Chart (Multi color 팔레트) ── */
   --chart-grid: rgba(35, 31, 32, 0.10);
   --chart-axis: #77776F;
-  --chart-1: #1C5BFF;
+  --chart-1: #6AC8C7;
   --chart-2: #F5843C;
-  --chart-3: #4CAF82;
-  --chart-4: #6AC8C7;
+  --chart-3: #3E5A80;
+  --chart-4: #4CAF82;
   --chart-5: #F2B705;
 
   /* ── Radius ── */
@@ -69,6 +79,11 @@
   --font-sans: 'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
                'Apple SD Gothic Neo', 'Segoe UI', 'Malgun Gothic', sans-serif;
   --font-mono: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+
+  /* ── Legacy alias (템플릿 호환) ── */
+  --brand-primary: var(--accent);
+  --brand-primary-hover: var(--accent-hover);
+  --brand-primary-ink: var(--daedong-blue-ink);
 }
 
 /* ── Reset & Base ── */
@@ -126,7 +141,7 @@ h1.text-xl {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-sm);
-  background: var(--brand-primary);
+  background: var(--accent);
   color: #fff;
   display: grid;
   place-items: center;
@@ -151,8 +166,8 @@ h1.text-xl {
   color: var(--text-primary);
 }
 .ds-nav-links a.active {
-  color: var(--brand-primary-ink);
-  background: var(--accent-soft);
+  color: var(--daedong-blue-ink);
+  background: var(--selected-soft);
   font-weight: 600;
 }
 
@@ -192,17 +207,16 @@ h1.text-xl {
 .ds-kpi {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-top: 3px solid var(--brand-primary);
+  border-top: 3px solid var(--accent);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 .ds-kpi-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.05em;
-  text-transform: uppercase;
   margin-bottom: 6px;
 }
 .ds-kpi-value {
@@ -230,18 +244,17 @@ h1.text-xl {
 .ds-table th {
   padding: 10px 14px;
   text-align: left;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 .ds-table th.right, .ds-table td.right { text-align: right; }
 .ds-table th.center, .ds-table td.center { text-align: center; }
 .ds-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(226, 229, 235, 0.5);
+  border-bottom: 1px solid rgba(220, 220, 215, 0.5);
   color: var(--text-secondary);
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
@@ -250,7 +263,7 @@ h1.text-xl {
 .ds-table tbody tr.clickable { cursor: pointer; }
 .ds-table tfoot {
   background: var(--accent-soft);
-  border-top: 2px solid var(--brand-primary);
+  border-top: 2px solid var(--accent);
   font-weight: 600;
 }
 .ds-table tfoot td { color: var(--text-primary); }
@@ -280,13 +293,13 @@ h1.text-xl {
   cursor: not-allowed;
 }
 .ds-btn--primary {
-  background: var(--brand-primary);
+  background: var(--accent);
   color: #fff;
-  border-color: var(--brand-primary);
+  border-color: var(--accent);
 }
 .ds-btn--primary:hover:not(:disabled) {
-  background: var(--brand-primary-hover);
-  border-color: var(--brand-primary-hover);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 .ds-btn--secondary {
   background: var(--surface);
@@ -346,7 +359,7 @@ h1.text-xl {
 /* ── Numeric emphasis ── */
 .num-negative { color: var(--st-danger) !important; font-weight: 600; }
 .num-positive { color: var(--st-ok) !important; font-weight: 600; }
-.num-primary  { color: var(--brand-primary) !important; font-weight: 700; }
+.num-primary  { color: var(--accent) !important; font-weight: 700; }
 
 /* ── Form inputs ── */
 .ds-input {
@@ -362,7 +375,7 @@ h1.text-xl {
 }
 .ds-input:focus {
   outline: none;
-  border-color: var(--brand-primary);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
 }
 .ds-input::placeholder { color: var(--text-muted); }
@@ -383,7 +396,7 @@ h1.text-xl {
   padding: 8px 32px 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%2394A3B8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%238A8A85' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
   -webkit-appearance: none;
   appearance: none;
   color: var(--text-primary);
@@ -391,7 +404,7 @@ h1.text-xl {
 }
 .ds-select:focus {
   outline: none;
-  border-color: var(--brand-primary);
+  border-color: var(--accent);
   box-shadow: 0 0 0 3px var(--ring);
 }
 
@@ -431,8 +444,8 @@ h1.text-xl {
 }
 .ds-tab:hover { color: var(--text-primary); }
 .ds-tab.active {
-  color: var(--brand-primary);
-  border-bottom-color: var(--brand-primary);
+  color: var(--selected);
+  border-bottom-color: var(--selected);
 }
 
 /* ── Pill filter ── */
@@ -451,9 +464,9 @@ h1.text-xl {
 }
 .ds-pill:hover { background: var(--surface-2); }
 .ds-pill.active {
-  background: var(--brand-primary);
+  background: var(--selected);
   color: #fff;
-  border-color: var(--brand-primary);
+  border-color: var(--selected);
 }
 
 /* ── Modal / Overlay ── */
@@ -581,15 +594,17 @@ input[type="file"]::file-selector-button:hover {
 .text-danger  { color: var(--st-danger) !important; }
 .text-caution { color: var(--st-caution) !important; }
 .text-info    { color: var(--st-info) !important; }
-.text-accent    { color: var(--brand-primary) !important; }
-.text-accent-ink { color: var(--brand-primary-ink) !important; }
+.text-accent    { color: var(--accent) !important; }
+.text-accent-ink { color: var(--daedong-blue-ink) !important; }
+.text-selected  { color: var(--selected) !important; }
 
 /* ── Background colors ── */
 .bg-surface   { background-color: var(--surface) !important; }
 .bg-surface-2 { background-color: var(--surface-2) !important; }
 .bg-bg        { background-color: var(--bg) !important; }
-.bg-accent      { background-color: var(--brand-primary) !important; }
+.bg-accent      { background-color: var(--accent) !important; }
 .bg-accent-soft { background-color: var(--accent-soft) !important; }
+.bg-selected-soft { background-color: var(--selected-soft) !important; }
 .bg-ok-soft     { background-color: var(--st-ok-soft) !important; }
 .bg-danger-soft { background-color: var(--st-danger-soft) !important; }
 .bg-caution-soft { background-color: var(--st-caution-soft) !important; }
@@ -597,13 +612,13 @@ input[type="file"]::file-selector-button:hover {
 
 /* ── Border colors ── */
 .border-line    { border-color: var(--border) !important; }
-.border-accent  { border-color: var(--brand-primary) !important; }
-.border-l-accent { border-left-color: var(--brand-primary) !important; }
+.border-accent  { border-color: var(--accent) !important; }
+.border-l-accent { border-left-color: var(--accent) !important; }
 .border-ok      { border-color: var(--st-ok) !important; }
 .border-danger  { border-color: var(--st-danger) !important; }
 
 /* Tailwind 슬래시 이스케이프 패턴 */
-.border-line\/50 { border-color: rgba(226, 229, 235, 0.5) !important; }
+.border-line\/50 { border-color: rgba(220, 220, 215, 0.5) !important; }
 
 /* ── Hover utilities ── */
 .hover\:bg-surface-2:hover { background-color: var(--surface-2) !important; }
