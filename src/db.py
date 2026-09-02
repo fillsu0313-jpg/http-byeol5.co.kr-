@@ -218,10 +218,20 @@ def get_ingest_logs(data_type: Optional[str] = None, limit: int = 20) -> list[di
 
 
 def get_product_daily(vendor_item_id: int, from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
-    """상품별 일별 데이터"""
+    """상품별 일별 데이터 (차트용 필드 포함)"""
     query = """
         SELECT s.stat_date, s.units_sold, s.total_views,
                a.ad_units, a.ad_clicks, a.ad_spend,
+               CASE WHEN s.units_sold IS NULL OR a.ad_units IS NULL THEN NULL
+                    WHEN s.units_sold - a.ad_units < 0 THEN 0
+                    ELSE s.units_sold - a.ad_units END AS organic_units,
+               CASE WHEN s.total_views IS NULL OR a.ad_clicks IS NULL THEN NULL
+                    WHEN s.total_views - a.ad_clicks < 0 THEN 0
+                    ELSE s.total_views - a.ad_clicks END AS organic_views,
+               CASE WHEN s.units_sold IS NOT NULL AND s.units_sold > 0
+                    THEN ROUND(CAST(s.units_sold AS REAL) /
+                         NULLIF(s.total_views, 0) * 100, 2)
+                    ELSE NULL END AS conversion_rate,
                c.sale_price - c.purchase_cost - COALESCE(c.commission_fee, 0)
                  - COALESCE(c.fulfillment_fee, 0) - COALESCE(c.other_unit_cost, 0) AS unit_margin,
                CASE WHEN s.units_sold IS NULL THEN NULL

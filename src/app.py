@@ -82,24 +82,48 @@ async def dashboard(request: Request, date: Optional[str] = None):
 
 
 @app.get("/product/{vendor_item_id}", response_class=HTMLResponse)
-async def product_detail(request: Request, vendor_item_id: int):
+async def product_detail(request: Request, vendor_item_id: int,
+                         period: Optional[str] = None,
+                         from_date: Optional[str] = None,
+                         to_date: Optional[str] = None):
     product = db.get_product(vendor_item_id)
     if not product:
         raise HTTPException(status_code=404, detail="상품을 찾을 수 없습니다")
+
+    # 기간 계산
+    import datetime
+    today = datetime.date.today()
+    if period == "7d":
+        from_date = (today - datetime.timedelta(days=7)).isoformat()
+        to_date = today.isoformat()
+    elif period == "30d":
+        from_date = (today - datetime.timedelta(days=30)).isoformat()
+        to_date = today.isoformat()
+    elif period == "90d":
+        from_date = (today - datetime.timedelta(days=90)).isoformat()
+        to_date = today.isoformat()
+    # period == "all" or custom from/to → 그대로 사용
+
     costs = db.get_product_costs(vendor_item_id)
-    daily = db.get_product_daily(vendor_item_id)
+    daily = db.get_product_daily(vendor_item_id, from_date, to_date)
     return templates.TemplateResponse(request, "product_detail.html", {
         "product": product,
         "costs": costs,
         "daily": daily,
+        "period": period or "all",
+        "from_date": from_date or "",
+        "to_date": to_date or "",
     })
 
 
 @app.get("/upload", response_class=HTMLResponse)
-async def upload_page(request: Request):
-    logs = db.get_ingest_logs("ads", limit=10)
+async def upload_page(request: Request, tab: Optional[str] = None):
+    ads_logs = db.get_ingest_logs("ads", limit=10)
+    cost_logs = db.get_ingest_logs("costs", limit=10)
     return templates.TemplateResponse(request, "upload.html", {
-        "logs": logs,
+        "ads_logs": ads_logs,
+        "cost_logs": cost_logs,
+        "active_tab": tab or "ads",
     })
 
 
@@ -129,6 +153,46 @@ async def upload_ads(file: UploadFile = File(...)):
                 "warnings": parsed["warnings"],
             })
         result = save_ad_data(parsed["rows"])
+        return JSONResponse(content={
+            "ok": True,
+            "inserted": result["inserted"],
+            "skipped": result["skipped"],
+            "warnings": parsed["warnings"] + result["errors"][:10],
+        })
+    except Exception as e:
+        return JSONResponse(
+            content={"ok": False, "error": str(e)},
+            status_code=500,
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+@app.post("/upload/costs")
+async def upload_costs(file: UploadFile = File(...)):
+    """원가 엑셀 파일 업로드 → 파싱 → DB 저장"""
+    if not file.filename.endswith((".xlsx", ".xls")):
+        return JSONResponse(
+            content={"ok": False, "error": "xlsx 또는 xls 파일만 업로드 가능합니다."},
+            status_code=400,
+        )
+    from src.cost_parser import parse_cost_excel, save_cost_data
+
+    suffix = Path(file.filename).suffix
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        content = await file.read()
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        parsed = parse_cost_excel(tmp_path)
+        if not parsed["rows"]:
+            return JSONResponse(content={
+                "ok": False,
+                "error": "파싱된 데이터가 없습니다.",
+                "warnings": parsed["warnings"],
+            })
+        result = save_cost_data(parsed["rows"])
         return JSONResponse(content={
             "ok": True,
             "inserted": result["inserted"],
