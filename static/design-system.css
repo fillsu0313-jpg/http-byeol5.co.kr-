@@ -17,15 +17,15 @@
   --brand-primary-ink: #1543C4;
 
   /* ── Surface & Text (Light) ── */
-  --bg: #ECECE8;
+  --bg: #F5F7FA;
   --surface: #FFFFFF;
-  --surface-2: #F7F7F5;
+  --surface-2: #EFF1F5;
   --surface-elevated: #FFFFFF;
-  --border: #DCDCD7;
-  --border-strong: #C7C7C1;
-  --text-primary: #231F20;
-  --text-secondary: #585958;
-  --text-muted: #9E9F9C;
+  --border: #E2E5EB;
+  --border-strong: #CDD1D9;
+  --text-primary: #1A1D23;
+  --text-secondary: #4B5563;
+  --text-muted: #94A3B8;
 
   /* ── Semantic: Status ── */
   --st-ok: #1E9E54;
@@ -61,8 +61,8 @@
   --radius-pill: 999px;
 
   /* ── Shadow ── */
-  --shadow-sm: 0 1px 2px rgba(15, 30, 50, 0.06), 0 1px 3px rgba(15, 30, 50, 0.08);
-  --shadow-md: 0 2px 4px rgba(15, 30, 50, 0.06), 0 4px 12px rgba(15, 30, 50, 0.12);
+  --shadow-sm: 0 1px 2px rgba(15, 30, 50, 0.08), 0 1px 4px rgba(15, 30, 50, 0.10);
+  --shadow-md: 0 2px 6px rgba(15, 30, 50, 0.08), 0 4px 14px rgba(15, 30, 50, 0.14);
   --shadow-lg: 0 4px 8px rgba(15, 30, 50, 0.08), 0 12px 32px rgba(15, 30, 50, 0.20);
 
   /* ── Typography ── */
@@ -82,6 +82,16 @@ body {
   -moz-osx-font-smoothing: grayscale;
   font-size: 14px;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Page Title ── */
+.ds-main h1,
+h1.text-xl {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
 }
 
 /* ── Global Nav ── */
@@ -107,8 +117,8 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 700;
-  font-size: 15px;
+  font-weight: 800;
+  font-size: 16px;
   color: var(--text-primary);
   text-decoration: none;
 }
@@ -169,7 +179,7 @@ body {
   justify-content: space-between;
 }
 .ds-card-header h2 {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
@@ -182,25 +192,29 @@ body {
 .ds-kpi {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-top: 3px solid var(--brand-primary);
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow-sm);
 }
 .ds-kpi-label {
-  font-size: 12px;
-  font-weight: 500;
+  font-size: 11px;
+  font-weight: 600;
   color: var(--text-muted);
-  margin-bottom: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
 }
 .ds-kpi-value {
-  font-size: 20px;
-  font-weight: 700;
+  font-size: 26px;
+  font-weight: 800;
   color: var(--text-primary);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 .ds-kpi-sub {
   font-size: 12px;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 /* ── Table ── */
@@ -216,19 +230,21 @@ body {
 .ds-table th {
   padding: 10px 14px;
   text-align: left;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 .ds-table th.right, .ds-table td.right { text-align: right; }
 .ds-table th.center, .ds-table td.center { text-align: center; }
 .ds-table td {
   padding: 10px 14px;
-  border-bottom: 1px solid rgba(220, 220, 215, 0.5);
+  border-bottom: 1px solid rgba(226, 229, 235, 0.5);
   color: var(--text-secondary);
   vertical-align: middle;
+  font-variant-numeric: tabular-nums;
 }
 .ds-table tbody tr:hover { background: var(--surface-2); }
 .ds-table tbody tr.clickable { cursor: pointer; }
@@ -367,7 +383,7 @@ body {
   padding: 8px 32px 8px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%239E9F9C' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
+  background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 4.5l3 3 3-3' fill='none' stroke='%2394A3B8' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 10px center;
   -webkit-appearance: none;
   appearance: none;
   color: var(--text-primary);
@@ -587,7 +603,7 @@ input[type="file"]::file-selector-button:hover {
 .border-danger  { border-color: var(--st-danger) !important; }
 
 /* Tailwind 슬래시 이스케이프 패턴 */
-.border-line\/50 { border-color: rgba(220, 220, 215, 0.5) !important; }
+.border-line\/50 { border-color: rgba(226, 229, 235, 0.5) !important; }
 
 /* ── Hover utilities ── */
 .hover\:bg-surface-2:hover { background-color: var(--surface-2) !important; }
