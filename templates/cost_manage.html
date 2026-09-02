@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold" style="color:var(--text-primary)">원가 관리</h1>
+    <h1 class="text-xl font-bold text-ink">원가 관리</h1>
     <a href="/costs/bulk" class="ds-btn ds-btn--ok ds-btn--sm">일괄 입력</a>
 </div>
 
@@ -12,19 +12,17 @@
     {# ── 상품 목록 ── #}
     <div class="lg:w-72 flex-shrink-0">
         <div class="ds-card">
-            <div class="p-3" style="border-bottom:1px solid var(--border)">
+            <div class="p-3 border-b border-line">
                 <input type="text" id="product-search" placeholder="상품 검색..."
-                       class="ds-input ds-input--sm"
-                       oninput="filterProducts(this.value)">
+                       class="ds-input ds-input--sm" oninput="filterProducts(this.value)">
             </div>
             <div class="max-h-[60vh] overflow-y-auto" id="product-list">
                 {% for p in products %}
                 <a href="/costs?vid={{ p.vendor_item_id }}"
-                   class="block px-3 py-2.5 text-sm product-item"
-                   style="border-bottom:1px solid rgba(220,220,215,0.5);text-decoration:none;
-                          {% if p.vendor_item_id == selected_vid %}background:var(--accent-soft);border-left:3px solid var(--brand-primary){% endif %}">
-                    <div class="font-semibold" style="color:var(--text-primary)">{{ p.display_name }}</div>
-                    <div class="text-xs" style="color:var(--text-muted)">
+                   class="block px-3 py-2.5 text-sm border-b border-line/50 no-underline hover:bg-surface-2 product-item
+                          {% if p.vendor_item_id == selected_vid %}bg-accent-soft border-l-3 border-l-accent{% endif %}">
+                    <div class="font-semibold text-ink">{{ p.display_name }}</div>
+                    <div class="text-xs text-ink-3">
                         이력 {{ p.cost_count }}건
                         {% if p.cost_count == 0 %}
                         <span class="ds-badge ds-badge--caution ml-1" style="font-size:10px;padding:1px 6px">미등록</span>
@@ -50,20 +48,20 @@
 
             {# API 가격 안내 #}
             {% if selected_product and selected_product.api_sale_price %}
-            <div class="ds-banner ds-banner--ok" style="border-radius:0;border-left:0;border-right:0;margin:0">
+            <div class="px-5 py-3 bg-ok-soft border-b border-line text-sm text-ok">
                 API 자동 수집: 판매가 <strong>{{ selected_product.api_sale_price|fmt }}원</strong>
                 {% if selected_product.api_commission_fee %}
                 · 판매수수료 <strong>{{ selected_product.api_commission_fee|fmt }}원</strong>
                 {% endif %}
-                <span style="color:var(--text-muted);font-size:12px;margin-left:4px">(원가 추가 시 자동 입력됩니다)</span>
+                <span class="text-ink-3 text-xs ml-1">(원가 추가 시 자동 입력됩니다)</span>
             </div>
             {% endif %}
 
             {# 추가 폼 (숨김) #}
-            <div id="add-form" class="hidden" style="border-bottom:1px solid var(--border);padding:16px 20px;background:var(--surface-2)">
-                <h3 class="text-sm font-bold mb-1" style="color:var(--text-primary)">새 원가 등록</h3>
+            <div id="add-form" class="hidden border-b border-line p-5 bg-surface-2">
+                <h3 class="text-sm font-bold text-ink mb-1">새 원가 등록</h3>
                 {% if selected_product and selected_product.api_sale_price %}
-                <p class="text-xs mb-3" style="color:var(--text-muted)">판매가·수수료는 API에서 자동 입력됩니다. <strong>매입원가</strong>만 입력하세요.</p>
+                <p class="text-xs text-ink-3 mb-3">판매가·수수료는 API에서 자동 입력됩니다. <strong>매입원가</strong>만 입력하세요.</p>
                 {% endif %}
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <div>
@@ -74,7 +72,7 @@
                         <label class="ds-label">
                             판매가 *
                             {% if selected_product and selected_product.api_sale_price %}
-                            <span style="color:var(--st-ok)">(API)</span>
+                            <span class="text-ok">(API)</span>
                             {% endif %}
                         </label>
                         <input type="number" id="f-sale-price" class="ds-input ds-input--sm" oninput="previewMargin()">
@@ -95,7 +93,7 @@
                         <label class="ds-label">
                             판매수수료
                             {% if selected_product and selected_product.api_commission_fee %}
-                            <span style="color:var(--st-ok)">(API)</span>
+                            <span class="text-ok">(API)</span>
                             {% endif %}
                         </label>
                         <input type="number" id="f-commission" value="0" class="ds-input ds-input--sm" oninput="previewMargin()">
@@ -143,13 +141,13 @@
                     <tbody>
                         {% for c in costs %}
                         <tr>
-                            <td style="color:var(--text-primary)">{{ c.effective_from }}</td>
+                            <td class="text-ink">{{ c.effective_from }}</td>
                             <td class="right">{{ c.sale_price|fmt }}</td>
                             <td class="right">{{ c.purchase_cost|fmt }}</td>
                             <td class="right">{{ c.commission_fee|fmt }}</td>
                             <td class="right">{{ c.fulfillment_fee|fmt }}</td>
                             <td class="right">{{ c.other_unit_cost|fmt }}</td>
-                            <td class="right {% if c.unit_margin is not none and c.unit_margin < 0 %}num-negative{% else %}num-primary{% endif %}" style="font-weight:600">
+                            <td class="right font-semibold {% if c.unit_margin is not none and c.unit_margin < 0 %}num-negative{% else %}num-primary{% endif %}">
                                 {{ c.unit_margin|fmt }}
                             </td>
                             <td class="center">
@@ -161,21 +159,16 @@
                 </table>
             </div>
             {% else %}
-            <div class="ds-empty">
-                <div class="ds-empty-title">원가 이력이 없습니다</div>
-            </div>
+            <div class="ds-empty"><div class="ds-empty-title">원가 이력이 없습니다</div></div>
             {% endif %}
         </div>
         {% else %}
         <div class="ds-card">
-            <div class="ds-empty">
-                <div class="ds-empty-title">좌측에서 상품을 선택하세요</div>
-            </div>
+            <div class="ds-empty"><div class="ds-empty-title">좌측에서 상품을 선택하세요</div></div>
         </div>
         {% endif %}
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -185,14 +178,11 @@ const API_SALE_PRICE = {{ selected_product.api_sale_price if selected_product an
 const API_COMMISSION_FEE = {{ selected_product.api_commission_fee if selected_product and selected_product.api_commission_fee else 'null' }};
 
 function filterProducts(q) {
-    const items = document.querySelectorAll('.product-item');
     const lower = q.toLowerCase();
-    items.forEach(el => {
-        const name = el.querySelector('.font-semibold').textContent.toLowerCase();
-        el.style.display = name.includes(lower) ? '' : 'none';
+    document.querySelectorAll('.product-item').forEach(el => {
+        el.style.display = el.querySelector('.font-semibold').textContent.toLowerCase().includes(lower) ? '' : 'none';
     });
 }
-
 function showAddForm() {
     document.getElementById('add-form').classList.remove('hidden');
     if (API_SALE_PRICE) document.getElementById('f-sale-price').value = API_SALE_PRICE;
@@ -200,14 +190,12 @@ function showAddForm() {
     previewMargin();
 }
 function hideAddForm() { document.getElementById('add-form').classList.add('hidden'); }
-
 function calcPurchaseCost() {
     const fx = parseFloat(document.getElementById('f-cost-fx').value) || 0;
     const rate = parseFloat(document.getElementById('f-fx-rate').value) || 0;
     if (fx > 0 && rate > 0) document.getElementById('f-purchase-cost').value = Math.round(fx * rate);
     previewMargin();
 }
-
 function previewMargin() {
     const sp = parseFloat(document.getElementById('f-sale-price').value) || 0;
     const pc = parseFloat(document.getElementById('f-purchase-cost').value) || 0;
@@ -219,7 +207,6 @@ function previewMargin() {
     el.textContent = margin.toLocaleString();
     el.className = margin < 0 ? 'num-negative' : 'num-primary';
 }
-
 async function submitCost() {
     const data = {
         vendor_item_id: SELECTED_VID,
@@ -234,23 +221,18 @@ async function submitCost() {
         memo: document.getElementById('f-memo').value || null,
     };
     if (!data.effective_from || !data.sale_price || !data.purchase_cost) {
-        alert('적용시작일, 판매가, 매입원가는 필수입니다.');
-        return;
+        alert('적용시작일, 판매가, 매입원가는 필수입니다.'); return;
     }
     const res = await fetch('/api/costs', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(data),
+        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(data),
     });
     if (res.ok) location.reload();
     else { const err = await res.json(); alert('오류: ' + (err.detail || '저장 실패')); }
 }
-
 async function deleteCost(costId) {
     if (!confirm('이 원가 이력을 삭제하시겠습니까?')) return;
     const res = await fetch('/api/costs/' + costId, { method: 'DELETE' });
-    if (res.ok) location.reload();
-    else alert('삭제 실패');
+    if (res.ok) location.reload(); else alert('삭제 실패');
 }
 </script>
 {% endblock %}

@@ -4,9 +4,9 @@
 
 {% block content %}
 <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3">
-    <h1 class="text-xl font-bold" style="color:var(--text-primary)">일별 대시보드</h1>
+    <h1 class="text-xl font-bold text-ink">일별 대시보드</h1>
     <div class="flex items-center gap-2">
-        <label for="date-picker" class="text-sm" style="color:var(--text-secondary)">날짜:</label>
+        <label for="date-picker" class="text-sm text-ink-2">날짜:</label>
         {% if dates %}
         <select id="date-picker" onchange="location.href='/?date='+this.value" class="ds-select">
             {% for d in dates %}
@@ -15,19 +15,17 @@
         </select>
         {% else %}
         <input type="date" id="date-picker" value="{{ selected_date or '' }}"
-               onchange="location.href='/?date='+this.value" class="ds-input" style="width:160px">
+               onchange="location.href='/?date='+this.value" class="ds-input w-40">
         {% endif %}
         {% if rows %}
-        <a href="/download/daily?date={{ selected_date }}" class="ds-btn ds-btn--ok ds-btn--sm">
-            엑셀 다운로드
-        </a>
+        <a href="/download/daily?date={{ selected_date }}" class="ds-btn ds-btn--ok ds-btn--sm">엑셀 다운로드</a>
         {% endif %}
     </div>
 </div>
 
 {# ── 수집 상태 배너 ── #}
 {% if collection %}
-<div class="mb-4 text-xs flex flex-wrap gap-3" style="color:var(--text-muted)">
+<div class="mb-4 text-xs flex flex-wrap gap-3 text-ink-3">
     <span>최근 판매: {{ collection.latest_sales or '없음' }}</span>
     <span>최근 광고: {{ collection.latest_ads or '없음' }}</span>
     {% if collection.latest_sales_products %}
@@ -74,7 +72,7 @@
             {{ totals.net_profit|round|fmt }}원
         </div>
         {% if totals.profit_change is not none %}
-        <div class="ds-kpi-sub {% if totals.profit_change > 0 %}st-positive{% elif totals.profit_change < 0 %}st-negative{% else %}st-neutral{% endif %}">
+        <div class="ds-kpi-sub {% if totals.profit_change > 0 %}text-ok{% elif totals.profit_change < 0 %}text-danger{% else %}text-ink-3{% endif %}">
             전일비 {% if totals.profit_change > 0 %}+{% endif %}{{ totals.profit_change|round|fmt }}
         </div>
         {% endif %}
@@ -95,8 +93,7 @@
 {# ── 검색 ── #}
 <div class="mb-3">
     <input type="text" id="searchInput" placeholder="상품명 검색..."
-           class="ds-input" style="max-width:260px"
-           oninput="filterRows()">
+           class="ds-input w-full sm:w-64" oninput="filterRows()">
 </div>
 
 {# ── PC 테이블 (≥1024px) ── #}
@@ -123,7 +120,7 @@
         <tbody>
             {% for r in rows %}
             <tr class="clickable data-row" data-name="{{ r.display_name }}" onclick="location.href='/product/{{ r.vendor_item_id }}'">
-                <td style="font-weight:600;color:var(--text-primary)">{{ r.display_name }}</td>
+                <td class="font-semibold text-ink">{{ r.display_name }}</td>
                 <td class="right">{{ r.units_sold|fmt }}</td>
                 <td class="right">{{ r.ad_units|fmt }}</td>
                 <td class="right">{{ r.organic_units|fmt }}</td>
@@ -133,14 +130,14 @@
                 <td class="right">{{ r.conversion_rate|fmt }}</td>
                 <td class="right">{{ r.ad_spend|fmt }}</td>
                 <td class="right">{{ r.unit_margin|fmt }}</td>
-                <td class="right {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}num-primary{% endif %}" style="font-weight:600">
+                <td class="right font-semibold {% if r.net_profit is not none and r.net_profit < 0 %}num-negative{% else %}num-primary{% endif %}">
                     {{ r.net_profit|fmt }}
                 </td>
                 {% if prev_date %}
-                <td class="right" style="font-size:12px;font-weight:500;
-                    {% if r.profit_change is not none and r.profit_change > 0 %}color:var(--st-ok)
-                    {% elif r.profit_change is not none and r.profit_change < 0 %}color:var(--st-danger)
-                    {% else %}color:var(--text-muted){% endif %}">
+                <td class="right text-xs font-medium
+                    {% if r.profit_change is not none and r.profit_change > 0 %}text-ok
+                    {% elif r.profit_change is not none and r.profit_change < 0 %}text-danger
+                    {% else %}text-ink-3{% endif %}">
                     {% if r.profit_change is not none %}
                         {% if r.profit_change > 0 %}+{{ r.profit_change|fmt }}
                         {% elif r.profit_change < 0 %}{{ r.profit_change|fmt }}
@@ -154,7 +151,7 @@
         {% if totals %}
         <tfoot>
             <tr>
-                <td style="color:var(--text-primary)">합계</td>
+                <td class="text-ink">합계</td>
                 <td class="right">{{ totals.units_sold|fmt }}</td>
                 <td class="right">{{ totals.ad_units|fmt }}</td>
                 <td class="right">{{ totals.organic_units|fmt }}</td>
@@ -168,10 +165,10 @@
                     {{ totals.net_profit|fmt }}
                 </td>
                 {% if prev_date %}
-                <td class="right" style="font-size:12px;font-weight:500;
-                    {% if totals.profit_change is not none and totals.profit_change > 0 %}color:var(--st-ok)
-                    {% elif totals.profit_change is not none and totals.profit_change < 0 %}color:var(--st-danger)
-                    {% else %}color:var(--text-muted){% endif %}">
+                <td class="right text-xs font-medium
+                    {% if totals.profit_change is not none and totals.profit_change > 0 %}text-ok
+                    {% elif totals.profit_change is not none and totals.profit_change < 0 %}text-danger
+                    {% else %}text-ink-3{% endif %}">
                     {% if totals.profit_change is not none %}
                         {% if totals.profit_change > 0 %}+{{ totals.profit_change|fmt }}
                         {% elif totals.profit_change < 0 %}{{ totals.profit_change|fmt }}
@@ -188,14 +185,14 @@
 {# ── 모바일 카드 (<1024px) ── #}
 <div class="lg:hidden space-y-2">
     {% if totals %}
-    <div style="background:var(--accent-soft);border:1px solid var(--brand-primary);border-radius:var(--radius)" class="p-3 mb-4">
+    <div class="bg-accent-soft border border-accent rounded-lg p-3 mb-4">
         <div class="flex justify-between items-center">
-            <span class="text-sm font-semibold" style="color:var(--brand-primary-ink)">전체 합계</span>
+            <span class="text-sm font-semibold text-accent-ink">전체 합계</span>
             <span class="text-lg font-bold {% if totals.net_profit < 0 %}num-negative{% else %}num-primary{% endif %}">
                 {{ totals.net_profit|fmt }}원
             </span>
         </div>
-        <div class="text-xs mt-1" style="color:var(--brand-primary)">판매 {{ totals.units_sold|fmt }}개 · 광고비 {{ totals.ad_spend|fmt }}원</div>
+        <div class="text-xs mt-1 text-accent">판매 {{ totals.units_sold|fmt }}개 · 광고비 {{ totals.ad_spend|fmt }}원</div>
     </div>
     {% endif %}
 
@@ -203,9 +200,9 @@
     <div class="ds-mobile-card mobile-card" data-name="{{ r.display_name }}">
         <div class="p-3 flex items-center justify-between cursor-pointer" onclick="toggleCard(this)">
             <div class="flex-1 min-w-0">
-                <a href="/product/{{ r.vendor_item_id }}" class="font-semibold text-sm block truncate"
-                   style="color:var(--text-primary)" onclick="event.stopPropagation()">{{ r.display_name }}</a>
-                <div class="flex gap-4 mt-1 text-xs" style="color:var(--text-muted)">
+                <a href="/product/{{ r.vendor_item_id }}" class="font-semibold text-sm text-ink block truncate"
+                   onclick="event.stopPropagation()">{{ r.display_name }}</a>
+                <div class="flex gap-4 mt-1 text-xs text-ink-3">
                     <span>판매 {{ r.units_sold|fmt }}</span>
                     <span>마진 {{ r.unit_margin|fmt }}</span>
                 </div>
@@ -215,26 +212,26 @@
                     {{ r.net_profit|fmt }}
                 </div>
                 {% if r.profit_change is not none %}
-                <div class="text-xs {% if r.profit_change > 0 %}st-positive{% elif r.profit_change < 0 %}st-negative{% else %}st-neutral{% endif %}">
+                <div class="text-xs {% if r.profit_change > 0 %}text-ok{% elif r.profit_change < 0 %}text-danger{% else %}text-ink-3{% endif %}">
                     {% if r.profit_change > 0 %}+{{ r.profit_change|fmt }}{% elif r.profit_change < 0 %}{{ r.profit_change|fmt }}{% else %}-{% endif %}
                 </div>
                 {% else %}
-                <svg class="w-4 h-4 mx-auto mt-1 transition-transform card-chevron" style="color:var(--text-muted)" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 text-ink-3 mx-auto mt-1 transition-transform card-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                 </svg>
                 {% endif %}
             </div>
         </div>
-        <div class="hidden border-t px-3 py-2 text-xs card-detail" style="border-color:var(--border);background:var(--surface-2)">
+        <div class="hidden border-t border-line px-3 py-2 text-xs bg-surface-2 card-detail">
             <div class="grid grid-cols-2 gap-y-1.5 gap-x-4">
-                <div class="flex justify-between"><span style="color:var(--text-muted)">광고판매</span><span>{{ r.ad_units|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">자연판매</span><span>{{ r.organic_units|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">총조회수</span><span>{{ r.total_views|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">광고클릭수</span><span>{{ r.ad_clicks|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">자연조회수</span><span>{{ r.organic_views|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">전환율</span><span>{% if r.conversion_rate is not none %}{{ r.conversion_rate }}%{% else %}-{% endif %}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">광고비</span><span>{{ r.ad_spend|fmt }}</span></div>
-                <div class="flex justify-between"><span style="color:var(--text-muted)">개당순마진</span><span>{{ r.unit_margin|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">광고판매</span><span>{{ r.ad_units|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">자연판매</span><span>{{ r.organic_units|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">총조회수</span><span>{{ r.total_views|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">광고클릭수</span><span>{{ r.ad_clicks|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">자연조회수</span><span>{{ r.organic_views|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">전환율</span><span>{% if r.conversion_rate is not none %}{{ r.conversion_rate }}%{% else %}-{% endif %}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">광고비</span><span>{{ r.ad_spend|fmt }}</span></div>
+                <div class="flex justify-between"><span class="text-ink-3">개당순마진</span><span>{{ r.unit_margin|fmt }}</span></div>
             </div>
         </div>
     </div>

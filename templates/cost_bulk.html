@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold" style="color:var(--text-primary)">원가 일괄 입력</h1>
+    <h1 class="text-xl font-bold text-ink">원가 일괄 입력</h1>
     <a href="/costs" class="ds-btn ds-btn--ghost ds-btn--sm">← 원가 관리</a>
 </div>
 
@@ -14,25 +14,22 @@
         <div class="flex flex-wrap items-end gap-4">
             <div>
                 <label class="ds-label">적용시작일 *</label>
-                <input type="date" id="common-date" value="{{ today }}" class="ds-input ds-input--sm" style="width:160px">
+                <input type="date" id="common-date" value="{{ today }}" class="ds-input ds-input--sm w-40">
             </div>
             <div>
                 <label class="ds-label">환율 (위안→원)</label>
                 <input type="number" step="0.01" id="common-fx-rate" value="330"
-                       class="ds-input ds-input--sm" style="width:100px"
-                       oninput="recalcAll()">
+                       class="ds-input ds-input--sm w-24" oninput="recalcAll()">
             </div>
             <div>
                 <label class="ds-label">입출고수수료</label>
                 <input type="number" id="common-fulfillment" value="0"
-                       class="ds-input ds-input--sm" style="width:100px"
-                       oninput="recalcAll()">
+                       class="ds-input ds-input--sm w-24" oninput="recalcAll()">
             </div>
             <div>
                 <label class="ds-label">기타비용</label>
                 <input type="number" id="common-other" value="0"
-                       class="ds-input ds-input--sm" style="width:100px"
-                       oninput="recalcAll()">
+                       class="ds-input ds-input--sm w-24" oninput="recalcAll()">
             </div>
         </div>
     </div>
@@ -41,19 +38,12 @@
 {# ── 필터 + 검색 ── #}
 <div class="flex flex-wrap items-center gap-3 mb-4">
     <div class="flex gap-1">
-        <a href="/costs/bulk?filter=all"
-           class="ds-pill {% if filter == 'all' %}active{% endif %}">
-            전체 ({{ products|length }})
-        </a>
-        <a href="/costs/bulk?filter=no_cost"
-           class="ds-pill {% if filter == 'no_cost' %}active{% endif %}">
-            미등록만
-        </a>
+        <a href="/costs/bulk?filter=all" class="ds-pill {% if filter == 'all' %}active{% endif %}">전체 ({{ products|length }})</a>
+        <a href="/costs/bulk?filter=no_cost" class="ds-pill {% if filter == 'no_cost' %}active{% endif %}">미등록만</a>
     </div>
     <input type="text" id="table-search" placeholder="상품 검색..."
-           class="ds-input ds-input--sm" style="width:200px"
-           oninput="filterTable(this.value)">
-    <div class="ml-auto text-sm" style="color:var(--text-muted)">
+           class="ds-input ds-input--sm w-48" oninput="filterTable(this.value)">
+    <div class="ml-auto text-sm text-ink-3">
         입력된 행: <span id="filled-count" class="num-primary">0</span>개
     </div>
 </div>
@@ -64,9 +54,9 @@
         <thead>
             <tr>
                 <th style="min-width:160px">상품명</th>
-                <th class="right" style="width:100px">판매가 <span style="color:var(--st-ok);font-weight:400;font-size:10px">API</span></th>
-                <th class="right" style="width:100px">수수료 <span style="color:var(--st-ok);font-weight:400;font-size:10px">API</span></th>
-                <th class="center" style="width:120px">위안단가 <span style="color:var(--st-caution);font-weight:400;font-size:10px">입력</span></th>
+                <th class="right" style="width:100px">판매가 <span class="text-ok font-normal text-[10px]">API</span></th>
+                <th class="right" style="width:100px">수수료 <span class="text-ok font-normal text-[10px]">API</span></th>
+                <th class="center" style="width:120px">위안단가 <span class="text-caution font-normal text-[10px]">입력</span></th>
                 <th class="right" style="width:100px">매입원가</th>
                 <th class="right" style="width:100px">순마진</th>
                 <th class="center" style="width:70px">원가 이력</th>
@@ -80,29 +70,27 @@
                 data-sale="{{ p.api_sale_price or '' }}"
                 data-comm="{{ p.api_commission_fee or '' }}">
                 <td>
-                    <div class="font-semibold ds-truncate" style="max-width:200px;color:var(--text-primary)" title="{{ p.display_name }}">{{ p.display_name }}</div>
-                    <div class="ds-mono" style="font-size:12px;color:var(--text-muted)">{{ p.vendor_item_id }}</div>
+                    <div class="font-semibold text-ink ds-truncate" style="max-width:200px" title="{{ p.display_name }}">{{ p.display_name }}</div>
+                    <div class="ds-mono text-xs text-ink-3">{{ p.vendor_item_id }}</div>
                 </td>
                 <td class="right">
-                    {% if p.api_sale_price %}{{ p.api_sale_price|fmt }}{% else %}<span style="color:var(--text-muted)">-</span>{% endif %}
+                    {% if p.api_sale_price %}{{ p.api_sale_price|fmt }}{% else %}<span class="text-ink-3">-</span>{% endif %}
                 </td>
                 <td class="right">
-                    {% if p.api_commission_fee %}{{ p.api_commission_fee|fmt }}{% else %}<span style="color:var(--text-muted)">-</span>{% endif %}
+                    {% if p.api_commission_fee %}{{ p.api_commission_fee|fmt }}{% else %}<span class="text-ink-3">-</span>{% endif %}
                 </td>
                 <td class="center">
                     <input type="number" step="0.01" min="0"
-                           class="yuan-input ds-input ds-input--sm"
-                           style="width:100px;text-align:right"
-                           placeholder="위안"
-                           oninput="recalcRow(this)">
+                           class="yuan-input ds-input ds-input--sm w-24 text-right"
+                           placeholder="위안" oninput="recalcRow(this)">
                 </td>
-                <td class="right calc-purchase" style="color:var(--text-muted)">-</td>
-                <td class="right calc-margin" style="font-weight:600;color:var(--text-muted)">-</td>
+                <td class="right calc-purchase text-ink-3">-</td>
+                <td class="right calc-margin font-semibold text-ink-3">-</td>
                 <td class="center">
                     {% if p.cost_count > 0 %}
-                    <span class="ds-badge ds-badge--ok" style="font-size:12px">{{ p.cost_count }}건</span>
+                    <span class="ds-badge ds-badge--ok">{{ p.cost_count }}건</span>
                     {% else %}
-                    <span class="ds-badge ds-badge--caution" style="font-size:12px">없음</span>
+                    <span class="ds-badge ds-badge--caution">없음</span>
                     {% endif %}
                 </td>
             </tr>
@@ -110,9 +98,7 @@
         </tbody>
     </table>
     {% if not products %}
-    <div class="ds-empty">
-        <div class="ds-empty-title">상품이 없습니다</div>
-    </div>
+    <div class="ds-empty"><div class="ds-empty-title">상품이 없습니다</div></div>
     {% endif %}
 </div>
 
@@ -120,26 +106,20 @@
 {% if products %}
 <div class="mt-4 flex justify-end gap-3">
     <button onclick="clearAll()" class="ds-btn ds-btn--secondary ds-btn--sm">초기화</button>
-    <button onclick="submitBulk()" id="btn-save"
-            class="ds-btn ds-btn--primary" disabled>
-        전체 저장
-    </button>
+    <button onclick="submitBulk()" id="btn-save" class="ds-btn ds-btn--primary" disabled>전체 저장</button>
 </div>
 {% endif %}
 
 {# ── 결과 모달 ── #}
 <div id="result-modal" class="ds-overlay">
     <div class="ds-modal">
-        <div class="ds-modal-header">
-            <h3 id="result-title">저장 완료</h3>
-        </div>
+        <div class="ds-modal-header"><h3 id="result-title">저장 완료</h3></div>
         <div class="ds-modal-body" id="result-body"></div>
         <div class="ds-modal-footer">
             <button onclick="closeModal()" class="ds-btn ds-btn--primary ds-btn--sm">확인</button>
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
@@ -151,132 +131,74 @@ function getCommon() {
         other: parseFloat(document.getElementById('common-other').value) || 0,
     };
 }
-
 function recalcRow(input) {
     const row = input.closest('tr');
     const yuan = parseFloat(input.value);
     const sale = parseFloat(row.dataset.sale) || 0;
     const comm = parseFloat(row.dataset.comm) || 0;
     const c = getCommon();
-
-    const purchaseEl = row.querySelector('.calc-purchase');
-    const marginEl = row.querySelector('.calc-margin');
-
+    const pEl = row.querySelector('.calc-purchase');
+    const mEl = row.querySelector('.calc-margin');
     if (!yuan || yuan <= 0 || !sale) {
-        purchaseEl.textContent = '-';
-        purchaseEl.style.color = 'var(--text-muted)';
-        marginEl.textContent = '-';
-        marginEl.style.color = 'var(--text-muted)';
-        marginEl.className = 'right calc-margin';
-        marginEl.style.fontWeight = '600';
+        pEl.textContent = '-'; pEl.className = 'right calc-purchase text-ink-3';
+        mEl.textContent = '-'; mEl.className = 'right calc-margin font-semibold text-ink-3';
     } else {
         const purchase = Math.round(yuan * c.fxRate);
         const margin = sale - purchase - comm - c.fulfillment - c.other;
-        purchaseEl.textContent = purchase.toLocaleString();
-        purchaseEl.style.color = 'var(--text-secondary)';
-        marginEl.textContent = margin.toLocaleString();
-        marginEl.style.color = margin < 0 ? 'var(--st-danger)' : 'var(--brand-primary)';
-        marginEl.style.fontWeight = '600';
+        pEl.textContent = purchase.toLocaleString(); pEl.className = 'right calc-purchase text-ink-2';
+        mEl.textContent = margin.toLocaleString();
+        mEl.className = 'right calc-margin font-semibold ' + (margin < 0 ? 'num-negative' : 'num-primary');
     }
     updateCount();
 }
-
-function recalcAll() {
-    document.querySelectorAll('.yuan-input').forEach(input => {
-        if (input.value) recalcRow(input);
-    });
-}
-
+function recalcAll() { document.querySelectorAll('.yuan-input').forEach(i => { if (i.value) recalcRow(i); }); }
 function updateCount() {
     const filled = [...document.querySelectorAll('.yuan-input')].filter(i => i.value && parseFloat(i.value) > 0).length;
     document.getElementById('filled-count').textContent = filled;
     document.getElementById('btn-save').disabled = filled === 0;
 }
-
 function filterTable(q) {
     const lower = q.toLowerCase();
-    document.querySelectorAll('.product-row').forEach(row => {
-        row.style.display = row.dataset.name.includes(lower) ? '' : 'none';
-    });
+    document.querySelectorAll('.product-row').forEach(r => { r.style.display = r.dataset.name.includes(lower) ? '' : 'none'; });
 }
-
-function clearAll() {
-    document.querySelectorAll('.yuan-input').forEach(input => {
-        input.value = '';
-        recalcRow(input);
-    });
-}
-
+function clearAll() { document.querySelectorAll('.yuan-input').forEach(i => { i.value = ''; recalcRow(i); }); }
 async function submitBulk() {
     const effectiveFrom = document.getElementById('common-date').value;
     if (!effectiveFrom) { alert('적용시작일을 입력하세요.'); return; }
-    const c = getCommon();
-    const rows = [];
-
+    const c = getCommon(); const rows = [];
     document.querySelectorAll('.product-row').forEach(row => {
-        const input = row.querySelector('.yuan-input');
-        const yuan = parseFloat(input.value);
+        const yuan = parseFloat(row.querySelector('.yuan-input').value);
         if (!yuan || yuan <= 0) return;
-        const vid = parseInt(row.dataset.vid);
         const sale = parseFloat(row.dataset.sale) || 0;
-        const comm = parseFloat(row.dataset.comm) || 0;
         if (!sale) return;
         rows.push({
-            vendor_item_id: vid,
-            effective_from: effectiveFrom,
-            sale_price: sale,
-            purchase_cost: Math.round(yuan * c.fxRate),
-            commission_fee: comm,
-            fulfillment_fee: c.fulfillment,
-            other_unit_cost: c.other,
-            purchase_cost_fx: yuan,
-            fx_rate: c.fxRate,
+            vendor_item_id: parseInt(row.dataset.vid), effective_from: effectiveFrom,
+            sale_price: sale, purchase_cost: Math.round(yuan * c.fxRate),
+            commission_fee: parseFloat(row.dataset.comm) || 0,
+            fulfillment_fee: c.fulfillment, other_unit_cost: c.other,
+            purchase_cost_fx: yuan, fx_rate: c.fxRate,
         });
     });
-
-    if (rows.length === 0) { alert('저장할 데이터가 없습니다. 위안단가를 입력하세요.'); return; }
-
+    if (!rows.length) { alert('저장할 데이터가 없습니다.'); return; }
     const btn = document.getElementById('btn-save');
-    btn.disabled = true;
-    btn.textContent = '저장 중...';
-
+    btn.disabled = true; btn.textContent = '저장 중...';
     try {
-        const res = await fetch('/api/costs/bulk', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ rows }),
-        });
+        const res = await fetch('/api/costs/bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({rows}) });
         const data = await res.json();
         if (res.ok) {
-            let html = `<p>신규 등록: <strong>${data.inserted}</strong>건</p>`;
-            html += `<p>업데이트: <strong>${data.updated}</strong>건</p>`;
-            if (data.errors && data.errors.length > 0) {
-                html += `<p class="mt-2" style="color:var(--st-danger)">오류 ${data.errors.length}건:</p>`;
-                html += '<ul style="font-size:12px;color:var(--st-danger);margin-top:4px;list-style:disc;padding-left:16px">';
-                data.errors.slice(0, 5).forEach(e => html += `<li>${e}</li>`);
-                html += '</ul>';
+            let h = `<p>신규 등록: <strong>${data.inserted}</strong>건</p><p>업데이트: <strong>${data.updated}</strong>건</p>`;
+            if (data.errors?.length) {
+                h += `<p class="mt-2 text-danger">오류 ${data.errors.length}건:</p><ul class="text-xs text-danger mt-1 list-disc ml-4">`;
+                data.errors.slice(0,5).forEach(e => h += `<li>${e}</li>`); h += '</ul>';
             }
-            document.getElementById('result-title').textContent =
-                data.errors && data.errors.length ? '저장 완료 (일부 오류)' : '저장 완료';
-            document.getElementById('result-body').innerHTML = html;
+            document.getElementById('result-title').textContent = data.errors?.length ? '저장 완료 (일부 오류)' : '저장 완료';
+            document.getElementById('result-body').innerHTML = h;
             document.getElementById('result-modal').classList.add('open');
-        } else {
-            alert('오류: ' + (data.detail || '저장 실패'));
-        }
-    } catch (e) {
-        alert('네트워크 오류: ' + e.message);
-    } finally {
-        btn.disabled = false;
-        btn.textContent = '전체 저장';
-        updateCount();
-    }
+        } else { alert('오류: ' + (data.detail || '저장 실패')); }
+    } catch(e) { alert('네트워크 오류: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '전체 저장'; updateCount(); }
 }
-
-function closeModal() {
-    document.getElementById('result-modal').classList.remove('open');
-    location.reload();
-}
-
+function closeModal() { document.getElementById('result-modal').classList.remove('open'); location.reload(); }
 updateCount();
 </script>
 {% endblock %}
