@@ -214,6 +214,59 @@ def upsert_product_cost(
             return cur.lastrowid
 
 
+def bulk_upsert_costs(rows: list[dict]) -> dict:
+    """여러 상품 원가를 단일 트랜잭션으로 일괄 upsert.
+
+    각 row: vendor_item_id, effective_from, sale_price, purchase_cost,
+            commission_fee, fulfillment_fee, other_unit_cost,
+            purchase_cost_fx, fx_rate, memo (optional)
+
+    Returns: {"inserted": n, "updated": n, "errors": []}
+    """
+    result = {"inserted": 0, "updated": 0, "errors": []}
+    with get_db() as conn:
+        for i, row in enumerate(rows):
+            try:
+                vid = int(row["vendor_item_id"])
+                ef = row["effective_from"]
+                existing = conn.execute(
+                    "SELECT id FROM product_costs WHERE vendor_item_id = ? AND effective_from = ?",
+                    (vid, ef),
+                ).fetchone()
+                params = (
+                    float(row["sale_price"]),
+                    float(row["purchase_cost"]),
+                    float(row.get("commission_fee", 0) or 0),
+                    float(row.get("fulfillment_fee", 0) or 0),
+                    float(row.get("other_unit_cost", 0) or 0),
+                    float(row["purchase_cost_fx"]) if row.get("purchase_cost_fx") else None,
+                    float(row["fx_rate"]) if row.get("fx_rate") else None,
+                    row.get("memo"),
+                )
+                if existing:
+                    conn.execute(
+                        """UPDATE product_costs SET sale_price=?, purchase_cost=?,
+                           commission_fee=?, fulfillment_fee=?, other_unit_cost=?,
+                           purchase_cost_fx=?, fx_rate=?, memo=?
+                           WHERE id=?""",
+                        (*params, existing["id"]),
+                    )
+                    result["updated"] += 1
+                else:
+                    conn.execute(
+                        """INSERT INTO product_costs
+                           (vendor_item_id, effective_from, sale_price, purchase_cost,
+                            commission_fee, fulfillment_fee, other_unit_cost,
+                            purchase_cost_fx, fx_rate, memo)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (vid, ef, *params),
+                    )
+                    result["inserted"] += 1
+            except Exception as e:
+                result["errors"].append(f"행 {i+1} (vid={row.get('vendor_item_id')}): {str(e)}")
+    return result
+
+
 def update_product_cost(cost_id: int, **kwargs) -> bool:
     """원가 수정"""
     allowed = {"effective_from", "sale_price", "purchase_cost", "commission_fee",

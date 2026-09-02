@@ -1,80 +1,72 @@
 {% extends "base.html" %}
 {% block title %}데이터 업로드{% endblock %}
-{% block nav_upload %}font-semibold text-gray-900{% endblock %}
+{% block nav_upload %}active{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto">
-    <h1 class="text-xl font-bold mb-6">데이터 업로드</h1>
+    <h1 class="text-xl font-bold mb-5" style="color:var(--text-primary)">데이터 업로드</h1>
 
-    <!-- 탭 -->
-    <div class="flex border-b mb-6">
-        <button id="tabAds" onclick="switchTab('ads')"
-                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
-            광고 데이터
-        </button>
-        <button id="tabCosts" onclick="switchTab('costs')"
-                class="px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors">
-            원가 데이터
-        </button>
+    {# 탭 #}
+    <div class="ds-tabs mb-5">
+        <button id="tabAds" onclick="switchTab('ads')" class="ds-tab">광고 데이터</button>
+        <button id="tabCosts" onclick="switchTab('costs')" class="ds-tab">원가 데이터</button>
     </div>
 
-    <!-- ========== 광고 업로드 탭 ========== -->
+    {# ========== 광고 업로드 탭 ========== #}
     <div id="panelAds" class="tab-panel">
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 text-sm text-blue-800">
-            <p class="font-semibold mb-1">쿠팡 광고센터 보고서 업로드</p>
-            <p>광고센터에서 다운로드한 엑셀 파일(.xlsx)을 업로드하세요.</p>
-            <p class="mt-1 text-blue-600">광고비는 원본값(VAT 제외)으로 저장되며, ×1.1은 조회 시 적용됩니다.</p>
+        <div class="ds-banner ds-banner--info mb-5">
+            <div>
+                <p class="font-semibold mb-1">쿠팡 광고센터 보고서 업로드</p>
+                <p>광고센터에서 다운로드한 엑셀 파일(.xlsx)을 업로드하세요.</p>
+                <p class="mt-1" style="opacity:0.8">광고비는 원본값(VAT 제외)으로 저장되며, ×1.1은 조회 시 적용됩니다.</p>
+            </div>
         </div>
 
-        <form id="adsForm" class="bg-white rounded-lg shadow p-6">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">엑셀 파일 선택</label>
-                <input type="file" id="adsFileInput" accept=".xlsx,.xls"
-                       class="block w-full text-sm text-gray-500
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-blue-50 file:text-blue-700
-                              hover:file:bg-blue-100">
+        <form id="adsForm" class="ds-card">
+            <div class="ds-card-body">
+                <div class="mb-4">
+                    <label class="ds-label">엑셀 파일 선택</label>
+                    <input type="file" id="adsFileInput" accept=".xlsx,.xls"
+                           class="block w-full text-sm" style="color:var(--text-secondary)">
+                </div>
+                <button type="submit" id="adsBtn" class="ds-btn ds-btn--primary w-full">업로드</button>
             </div>
-            <button type="submit" id="adsBtn"
-                    class="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700
-                           disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium">
-                업로드
-            </button>
         </form>
 
-        <div id="adsResult" class="hidden mt-6 bg-white rounded-lg shadow p-6">
-            <h2 class="font-semibold mb-3">업로드 결과</h2>
-            <div id="adsResultContent"></div>
+        <div id="adsResult" class="hidden mt-5 ds-card">
+            <div class="ds-card-body">
+                <h2 class="font-semibold mb-3" style="color:var(--text-primary)">업로드 결과</h2>
+                <div id="adsResultContent"></div>
+            </div>
         </div>
 
         {% if ads_logs %}
-        <div class="mt-8">
-            <h2 class="font-semibold mb-3">최근 업로드 이력</h2>
-            <div class="bg-white rounded-lg shadow overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50">
+        <div class="mt-6">
+            <h2 class="font-semibold mb-3" style="color:var(--text-primary)">최근 업로드 이력</h2>
+            <div class="ds-card overflow-hidden">
+                <table class="ds-table">
+                    <thead>
                         <tr>
-                            <th class="px-4 py-2 text-left">일시</th>
-                            <th class="px-4 py-2 text-left">기간</th>
-                            <th class="px-4 py-2 text-right">건수</th>
-                            <th class="px-4 py-2 text-left">상태</th>
+                            <th>일시</th>
+                            <th>기간</th>
+                            <th class="right">건수</th>
+                            <th>상태</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in ads_logs %}
-                        <tr class="border-t">
-                            <td class="px-4 py-2">{{ log.ran_at[:16] }}</td>
-                            <td class="px-4 py-2">{{ log.stat_date }}</td>
-                            <td class="px-4 py-2 text-right">{{ log.row_count }}</td>
-                            <td class="px-4 py-2">
-                                <span class="px-2 py-0.5 rounded text-xs
-                                    {% if log.status == 'ok' %}bg-green-100 text-green-700
-                                    {% elif log.status == 'partial' %}bg-yellow-100 text-yellow-700
-                                    {% else %}bg-red-100 text-red-700{% endif %}">
-                                    {{ log.status }}
-                                </span>
+                        <tr>
+                            <td>{{ log.ran_at[:16] }}</td>
+                            <td>{{ log.stat_date }}</td>
+                            <td class="right">{{ log.row_count }}</td>
+                            <td>
+                                {% if log.status == 'ok' %}
+                                <span class="ds-badge ds-badge--ok">{{ log.status }}</span>
+                                {% elif log.status == 'partial' %}
+                                <span class="ds-badge ds-badge--caution">{{ log.status }}</span>
+                                {% else %}
+                                <span class="ds-badge ds-badge--danger">{{ log.status }}</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -85,103 +77,105 @@
         {% endif %}
     </div>
 
-    <!-- ========== 원가 업로드 탭 ========== -->
+    {# ========== 원가 업로드 탭 ========== #}
     <div id="panelCosts" class="tab-panel hidden">
-        <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-6 text-sm text-green-800">
-            <p class="font-semibold mb-1">원가 엑셀 업로드</p>
-            <p>아래 양식에 맞춘 엑셀 파일(.xlsx)을 업로드하세요.</p>
-            <p class="mt-1 text-green-600">동일 (vendorItemId, 적용시작일) 조합은 덮어쓰기됩니다.</p>
-        </div>
-
-        <!-- 양식 안내 -->
-        <div class="bg-white rounded-lg shadow p-4 mb-6 text-sm overflow-x-auto">
-            <p class="font-semibold mb-2">엑셀 양식 (첫 행: 헤더)</p>
-            <table class="text-xs border-collapse">
-                <thead>
-                    <tr class="bg-gray-100">
-                        <th class="border px-2 py-1">vendorItemId</th>
-                        <th class="border px-2 py-1">적용시작일</th>
-                        <th class="border px-2 py-1">판매가</th>
-                        <th class="border px-2 py-1">위안단가</th>
-                        <th class="border px-2 py-1">환율</th>
-                        <th class="border px-2 py-1">매입원가</th>
-                        <th class="border px-2 py-1">판매수수료</th>
-                        <th class="border px-2 py-1">입출고수수료</th>
-                        <th class="border px-2 py-1">기타비용</th>
-                        <th class="border px-2 py-1">메모</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="border px-2 py-1 text-gray-500">88869178139</td>
-                        <td class="border px-2 py-1 text-gray-500">2026-08-01</td>
-                        <td class="border px-2 py-1 text-gray-500">9900</td>
-                        <td class="border px-2 py-1 text-gray-500">4.4</td>
-                        <td class="border px-2 py-1 text-gray-500">330</td>
-                        <td class="border px-2 py-1 text-gray-500">1452</td>
-                        <td class="border px-2 py-1 text-gray-500">0</td>
-                        <td class="border px-2 py-1 text-gray-500">0</td>
-                        <td class="border px-2 py-1 text-gray-500">0</td>
-                        <td class="border px-2 py-1 text-gray-500"></td>
-                    </tr>
-                </tbody>
-            </table>
-            <ul class="mt-2 text-xs text-gray-600 space-y-0.5">
-                <li>- <strong>vendorItemId + 적용시작일</strong>: 필수</li>
-                <li>- <strong>판매가 + 매입원가</strong>: 필수 (위안단가/환율은 선택, 있으면 매입원가 자동계산)</li>
-                <li>- 날짜 형식: YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD 지원</li>
-            </ul>
-        </div>
-
-        <form id="costsForm" class="bg-white rounded-lg shadow p-6">
-            <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 mb-2">엑셀 파일 선택</label>
-                <input type="file" id="costsFileInput" accept=".xlsx,.xls"
-                       class="block w-full text-sm text-gray-500
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-green-50 file:text-green-700
-                              hover:file:bg-green-100">
+        <div class="ds-banner ds-banner--ok mb-5">
+            <div>
+                <p class="font-semibold mb-1">원가 엑셀 업로드</p>
+                <p>아래 양식에 맞춘 엑셀 파일(.xlsx)을 업로드하세요.</p>
+                <p class="mt-1" style="opacity:0.8">동일 (vendorItemId, 적용시작일) 조합은 덮어쓰기됩니다.</p>
             </div>
-            <button type="submit" id="costsBtn"
-                    class="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700
-                           disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium">
-                업로드
-            </button>
+        </div>
+
+        {# 양식 안내 #}
+        <div class="ds-card mb-5">
+            <div class="ds-card-body">
+                <p class="font-semibold mb-2 text-sm" style="color:var(--text-primary)">엑셀 양식 (첫 행: 헤더)</p>
+                <div class="overflow-x-auto">
+                    <table class="ds-table" style="font-size:12px">
+                        <thead>
+                            <tr>
+                                <th>vendorItemId</th>
+                                <th>적용시작일</th>
+                                <th>판매가</th>
+                                <th>위안단가</th>
+                                <th>환율</th>
+                                <th>매입원가</th>
+                                <th>판매수수료</th>
+                                <th>입출고수수료</th>
+                                <th>기타비용</th>
+                                <th>메모</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="ds-mono" style="color:var(--text-muted)">88869178139</td>
+                                <td style="color:var(--text-muted)">2026-08-01</td>
+                                <td style="color:var(--text-muted)">9900</td>
+                                <td style="color:var(--text-muted)">4.4</td>
+                                <td style="color:var(--text-muted)">330</td>
+                                <td style="color:var(--text-muted)">1452</td>
+                                <td style="color:var(--text-muted)">0</td>
+                                <td style="color:var(--text-muted)">0</td>
+                                <td style="color:var(--text-muted)">0</td>
+                                <td style="color:var(--text-muted)"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <ul class="mt-2 text-xs space-y-0.5" style="color:var(--text-muted)">
+                    <li>- <strong>vendorItemId + 적용시작일</strong>: 필수</li>
+                    <li>- <strong>판매가 + 매입원가</strong>: 필수 (위안단가/환율은 선택, 있으면 매입원가 자동계산)</li>
+                    <li>- 날짜 형식: YYYY-MM-DD, YYYY.MM.DD, YYYY/MM/DD 지원</li>
+                </ul>
+            </div>
+        </div>
+
+        <form id="costsForm" class="ds-card">
+            <div class="ds-card-body">
+                <div class="mb-4">
+                    <label class="ds-label">엑셀 파일 선택</label>
+                    <input type="file" id="costsFileInput" accept=".xlsx,.xls"
+                           class="block w-full text-sm" style="color:var(--text-secondary)">
+                </div>
+                <button type="submit" id="costsBtn" class="ds-btn ds-btn--ok w-full">업로드</button>
+            </div>
         </form>
 
-        <div id="costsResult" class="hidden mt-6 bg-white rounded-lg shadow p-6">
-            <h2 class="font-semibold mb-3">업로드 결과</h2>
-            <div id="costsResultContent"></div>
+        <div id="costsResult" class="hidden mt-5 ds-card">
+            <div class="ds-card-body">
+                <h2 class="font-semibold mb-3" style="color:var(--text-primary)">업로드 결과</h2>
+                <div id="costsResultContent"></div>
+            </div>
         </div>
 
         {% if cost_logs %}
-        <div class="mt-8">
-            <h2 class="font-semibold mb-3">최근 업로드 이력</h2>
-            <div class="bg-white rounded-lg shadow overflow-hidden">
-                <table class="w-full text-sm">
-                    <thead class="bg-gray-50">
+        <div class="mt-6">
+            <h2 class="font-semibold mb-3" style="color:var(--text-primary)">최근 업로드 이력</h2>
+            <div class="ds-card overflow-hidden">
+                <table class="ds-table">
+                    <thead>
                         <tr>
-                            <th class="px-4 py-2 text-left">일시</th>
-                            <th class="px-4 py-2 text-left">내용</th>
-                            <th class="px-4 py-2 text-right">건수</th>
-                            <th class="px-4 py-2 text-left">상태</th>
+                            <th>일시</th>
+                            <th>내용</th>
+                            <th class="right">건수</th>
+                            <th>상태</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in cost_logs %}
-                        <tr class="border-t">
-                            <td class="px-4 py-2">{{ log.ran_at[:16] }}</td>
-                            <td class="px-4 py-2">{{ log.message or '-' }}</td>
-                            <td class="px-4 py-2 text-right">{{ log.row_count }}</td>
-                            <td class="px-4 py-2">
-                                <span class="px-2 py-0.5 rounded text-xs
-                                    {% if log.status == 'ok' %}bg-green-100 text-green-700
-                                    {% elif log.status == 'partial' %}bg-yellow-100 text-yellow-700
-                                    {% else %}bg-red-100 text-red-700{% endif %}">
-                                    {{ log.status }}
-                                </span>
+                        <tr>
+                            <td>{{ log.ran_at[:16] }}</td>
+                            <td>{{ log.message or '-' }}</td>
+                            <td class="right">{{ log.row_count }}</td>
+                            <td>
+                                {% if log.status == 'ok' %}
+                                <span class="ds-badge ds-badge--ok">{{ log.status }}</span>
+                                {% elif log.status == 'partial' %}
+                                <span class="ds-badge ds-badge--caution">{{ log.status }}</span>
+                                {% else %}
+                                <span class="ds-badge ds-badge--danger">{{ log.status }}</span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% endfor %}
@@ -203,22 +197,17 @@ function switchTab(tab) {
         const btn = document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1));
         if (t === tab) {
             panel.classList.remove('hidden');
-            btn.classList.add('border-blue-600', 'text-blue-600');
-            btn.classList.remove('border-transparent', 'text-gray-500');
+            btn.classList.add('active');
         } else {
             panel.classList.add('hidden');
-            btn.classList.remove('border-blue-600', 'text-blue-600');
-            btn.classList.add('border-transparent', 'text-gray-500');
+            btn.classList.remove('active');
         }
     });
-    // URL 업데이트 (새로고침 없이)
     history.replaceState(null, '', '/upload?tab=' + tab);
 }
 
-// 초기 탭 설정
 switchTab('{{ active_tab }}');
 
-// 업로드 핸들러 공통 함수
 function setupUploadForm(formId, fileInputId, btnId, resultId, resultContentId, uploadUrl) {
     document.getElementById(formId).addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -227,10 +216,7 @@ function setupUploadForm(formId, fileInputId, btnId, resultId, resultContentId, 
         const resultDiv = document.getElementById(resultId);
         const resultContent = document.getElementById(resultContentId);
 
-        if (!fileInput.files.length) {
-            alert('파일을 선택하세요.');
-            return;
-        }
+        if (!fileInput.files.length) { alert('파일을 선택하세요.'); return; }
 
         btn.disabled = true;
         btn.textContent = '업로드 중...';
@@ -242,38 +228,28 @@ function setupUploadForm(formId, fileInputId, btnId, resultId, resultContentId, 
         try {
             const resp = await fetch(uploadUrl, { method: 'POST', body: formData });
             const data = await resp.json();
-
             let html = '';
             if (data.ok) {
-                html += `<p class="text-green-700 font-medium mb-2">업로드 성공</p>`;
-                html += `<ul class="text-sm space-y-1">`;
-                html += `<li>삽입/수정: <strong>${data.inserted}</strong>건</li>`;
-                if (data.skipped > 0) {
-                    html += `<li class="text-yellow-600">건너뜀: ${data.skipped}건</li>`;
-                }
+                html += `<p class="st-positive mb-2">업로드 성공</p>`;
+                html += `<ul class="text-sm space-y-1"><li>삽입/수정: <strong>${data.inserted}</strong>건</li>`;
+                if (data.skipped > 0) html += `<li style="color:var(--st-caution)">건너뜀: ${data.skipped}건</li>`;
                 html += `</ul>`;
             } else {
-                html += `<p class="text-red-700 font-medium mb-2">업로드 실패</p>`;
-                html += `<p class="text-sm text-red-600">${data.error || '알 수 없는 오류'}</p>`;
+                html += `<p class="st-negative mb-2">업로드 실패</p>`;
+                html += `<p class="text-sm" style="color:var(--st-danger)">${data.error || '알 수 없는 오류'}</p>`;
             }
-
             if (data.warnings && data.warnings.length > 0) {
-                html += `<div class="mt-3 p-3 bg-yellow-50 rounded text-sm">`;
-                html += `<p class="font-medium text-yellow-700 mb-1">경고 (${data.warnings.length}건)</p>`;
-                html += `<ul class="text-yellow-600 space-y-0.5">`;
-                data.warnings.slice(0, 10).forEach(w => {
-                    html += `<li>- ${w}</li>`;
-                });
-                if (data.warnings.length > 10) {
-                    html += `<li>... 외 ${data.warnings.length - 10}건</li>`;
-                }
-                html += `</ul></div>`;
+                html += `<div class="mt-3 ds-banner ds-banner--caution"><div>`;
+                html += `<p class="font-semibold mb-1">경고 (${data.warnings.length}건)</p>`;
+                html += `<ul style="font-size:12px" class="space-y-0.5">`;
+                data.warnings.slice(0, 10).forEach(w => html += `<li>- ${w}</li>`);
+                if (data.warnings.length > 10) html += `<li>... 외 ${data.warnings.length - 10}건</li>`;
+                html += `</ul></div></div>`;
             }
-
             resultContent.innerHTML = html;
             resultDiv.classList.remove('hidden');
         } catch (err) {
-            resultContent.innerHTML = `<p class="text-red-600">요청 실패: ${err.message}</p>`;
+            resultContent.innerHTML = `<p style="color:var(--st-danger)">요청 실패: ${err.message}</p>`;
             resultDiv.classList.remove('hidden');
         } finally {
             btn.disabled = false;

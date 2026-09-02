@@ -246,6 +246,23 @@ async def cost_manage(request: Request, vid: Optional[int] = None):
     })
 
 
+@app.get("/costs/bulk", response_class=HTMLResponse)
+async def cost_bulk(request: Request, filter: Optional[str] = None, q: Optional[str] = None):
+    """원가 일괄 입력 페이지"""
+    products = db.get_products_with_cost_status()
+    if filter == "no_cost":
+        products = [p for p in products if p["cost_count"] == 0]
+    if q:
+        q_lower = q.lower()
+        products = [p for p in products if q_lower in (p.get("display_name") or "").lower()]
+    return templates.TemplateResponse(request, "cost_bulk.html", {
+        "products": products,
+        "filter": filter or "all",
+        "q": q or "",
+        "today": date.today().isoformat(),
+    })
+
+
 # ──────────────── API 라우트 ────────────────
 
 @app.get("/api/daily")
@@ -290,6 +307,17 @@ async def api_add_cost(request: Request):
         memo=data.get("memo"),
     )
     return JSONResponse(content={"id": cost_id, "ok": True})
+
+
+@app.post("/api/costs/bulk")
+async def api_bulk_costs(request: Request):
+    """원가 일괄 등록/수정"""
+    data = await request.json()
+    rows = data.get("rows", [])
+    if not rows:
+        raise HTTPException(400, "저장할 데이터가 없습니다")
+    result = db.bulk_upsert_costs(rows)
+    return JSONResponse(content=result)
 
 
 @app.put("/api/costs/{cost_id}")
