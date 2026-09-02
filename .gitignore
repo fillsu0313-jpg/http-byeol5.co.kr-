@@ -5,13 +5,12 @@ __pycache__/
 .venv/
 venv/
 
-# DB
-data/coupang.db
-data/coupang.db-wal
-data/coupang.db-shm
+# DB & data
+data/
 
 # Config (API keys)
 config.json
+.env
 
 # IDE
 .vscode/

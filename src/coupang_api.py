@@ -80,33 +80,68 @@ class CoupangAPI:
         self, date_from: str, date_to: str
     ) -> list[dict]:
         """
-        판매 데이터 조회 (페이징 자동 처리).
+        매출내역 조회 (페이징 자동 처리, 최대 31일).
         date_from, date_to: 'YYYY-MM-DD' 형식
-        반환: [{vendorItemId, orderedDate, revenue, quantity, ...}, ...]
+        반환: [{orderId, saleDate, recognitionDate, items: [{vendorItemId, quantity, salePrice, ...}], ...}, ...]
         """
         path = "/v2/providers/openapi/apis/api/v1/revenue-history"
         all_items = []
-        next_token = None
+        token = ""
 
         while True:
             params = {
                 "vendorId": self.vendor_id,
-                "recognizedFrom": date_from,
-                "recognizedTo": date_to,
-                "maxPerPage": 100,
+                "recognitionDateFrom": date_from,
+                "recognitionDateTo": date_to,
+                "token": token,
+                "maxPerPage": 50,
             }
-            if next_token:
-                params["nextToken"] = next_token
 
             data = self._get(path, params)
             items = data.get("data", [])
             all_items.extend(items)
 
-            next_token = data.get("nextToken")
-            if not next_token or not items:
+            if not data.get("hasNext"):
+                break
+            token = data.get("nextToken", "")
+            if not token:
                 break
 
         return all_items
+
+    def get_seller_products(self, next_token: str = None) -> list[dict]:
+        """
+        셀러 상품 목록 전체 조회 (페이징 자동 처리).
+        반환: [{sellerProductId, vendorItemId, productId, sellerProductName, ...}, ...]
+        각 상품의 옵션(vendorItem) 정보를 포함.
+        """
+        path = "/v2/providers/seller_api/apis/api/v1/marketplace/seller-products"
+        all_items = []
+        _next = next_token
+
+        while True:
+            params = {"vendorId": self.vendor_id, "maxPerPage": 100}
+            if _next:
+                params["nextToken"] = _next
+
+            data = self._get(path, params)
+            items = data.get("data", [])
+            all_items.extend(items)
+
+            _next = data.get("nextToken")
+            if not _next or not items:
+                break
+
+        return all_items
+
+    def get_seller_product_detail(self, seller_product_id: int) -> dict:
+        """
+        셀러 상품 상세 조회 — items(옵션) 배열 포함.
+        반환: {sellerProductId, items: [{vendorItemId, itemName, ...}], ...}
+        """
+        path = f"/v2/providers/seller_api/apis/api/v1/marketplace/seller-products/{seller_product_id}"
+        data = self._get(path)
+        return data.get("data", data)
 
     def get_order_sheets(
         self,
@@ -116,9 +151,16 @@ class CoupangAPI:
     ) -> list[dict]:
         """
         주문 데이터 조회 (페이징 자동 처리).
+        date_from, date_to: 'YYYY-MM-DD' 형식 (자동으로 +09:00 추가)
         status: ACCEPT, INSTRUCT, DEPARTURE, DELIVERING, FINAL_DELIVERY
-        반환: [{orderId, vendorItemId, shippingCount, orderedAt, ...}, ...]
+        반환: [{orderId, orderedAt, orderItems: [{vendorItemId, shippingCount, ...}], ...}, ...]
         """
+        # 쿠팡 주문서 API는 yyyy-MM-dd+09:00 형식 필요
+        if "+0" not in date_from:
+            date_from = f"{date_from}+09:00"
+        if "+0" not in date_to:
+            date_to = f"{date_to}+09:00"
+
         path = f"/v2/providers/openapi/apis/api/v5/vendors/{self.vendor_id}/ordersheets"
         all_items = []
         next_token = None
@@ -145,8 +187,32 @@ class CoupangAPI:
 
 
 def load_config(config_path: str = None) -> dict:
-    """config.json에서 API 키 로드"""
+    """
+    API 키 로드. 우선순위:
+    1. .env 파일 (COUPANG_ACCESS_KEY, COUPANG_SECRET_KEY, COUPANG_VENDOR_ID)
+    2. config.json (하위 호환)
+    """
+    import os
     from pathlib import Path
+
+    try:
+        from dotenv import load_dotenv
+        env_path = Path(__file__).resolve().parent.parent / ".env"
+        load_dotenv(env_path)
+    except ImportError:
+        pass
+
+    # .env에서 읽기 시도
+    env_config = {
+        "access_key": os.environ.get("COUPANG_ACCESS_KEY", ""),
+        "secret_key": os.environ.get("COUPANG_SECRET_KEY", ""),
+        "vendor_id": os.environ.get("COUPANG_VENDOR_ID", ""),
+    }
+
+    if all(env_config.values()):
+        return env_config
+
+    # .env에 값이 없으면 config.json 폴백
     if config_path is None:
         config_path = Path(__file__).resolve().parent.parent / "config.json"
     else:
@@ -154,8 +220,9 @@ def load_config(config_path: str = None) -> dict:
 
     if not config_path.exists():
         raise FileNotFoundError(
-            f"설정 파일을 찾을 수 없습니다: {config_path}\n"
-            "config.example.json을 복사하여 config.json을 만들고 API 키를 입력하세요."
+            "API 키를 찾을 수 없습니다.\n"
+            ".env 파일에 COUPANG_ACCESS_KEY, COUPANG_SECRET_KEY, COUPANG_VENDOR_ID를 설정하거나,\n"
+            "config.json을 만들어 access_key, secret_key, vendor_id를 입력하세요."
         )
 
     with open(config_path, encoding="utf-8") as f:
@@ -170,6 +237,6 @@ def load_config(config_path: str = None) -> dict:
 
 
 def create_client(config_path: str = None) -> CoupangAPI:
-    """config.json 로드 → CoupangAPI 인스턴스 생성"""
+    """설정 로드 → CoupangAPI 인스턴스 생성 (.env 우선, config.json 폴백)"""
     cfg = load_config(config_path)
     return CoupangAPI(cfg["access_key"], cfg["secret_key"], cfg["vendor_id"])
