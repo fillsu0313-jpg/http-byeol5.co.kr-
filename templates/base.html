@@ -4,30 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}쿠팡 순이익 대시보드{% endblock %}</title>
-    <link rel="stylesheet" href="/static/design-system.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
     tailwind.config = {
         theme: {
             extend: {
                 fontFamily: { sans: ['Pretendard','Pretendard Variable','-apple-system','BlinkMacSystemFont','Apple SD Gothic Neo','Segoe UI','Malgun Gothic','sans-serif'] },
-                colors: {
-                    page:    'var(--bg)',
-                    surface: { DEFAULT:'var(--surface)', 2:'var(--surface-2)', up:'var(--surface-elevated)' },
-                    line:    { DEFAULT:'var(--border)', strong:'var(--border-strong)' },
-                    ink:     { DEFAULT:'var(--text-primary)', 2:'var(--text-secondary)', 3:'var(--text-muted)' },
-                    accent:  { DEFAULT:'var(--brand-primary)', hover:'var(--brand-primary-hover)', ink:'var(--brand-primary-ink)', soft:'var(--accent-soft)' },
-                    ok:      { DEFAULT:'var(--st-ok)', soft:'var(--st-ok-soft)' },
-                    caution: { DEFAULT:'var(--st-caution)', soft:'var(--st-caution-soft)' },
-                    danger:  { DEFAULT:'var(--st-danger)', soft:'var(--st-danger-soft)' },
-                    info:    { DEFAULT:'var(--st-info)', soft:'var(--st-info-soft)' },
-                },
-                borderColor: { DEFAULT:'var(--border)' },
-                borderRadius: { DEFAULT: '8px' },
             }
         }
     }
     </script>
+    <link rel="stylesheet" href="/static/design-system.css">
     {% block head %}{% endblock %}
 </head>
 <body>
