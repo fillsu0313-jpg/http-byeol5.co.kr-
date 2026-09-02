@@ -551,3 +551,44 @@ input[type="file"]::file-selector-button:hover {
   .ds-main { padding: 12px 12px 32px; }
   .ds-nav-links a { padding: 6px 10px; font-size: 12px; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Token-mapped utility classes
+   Tailwind CDN은 var()를 color로 처리 못하므로 직접 정의.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Text colors ── */
+.text-ink   { color: var(--text-primary) !important; }
+.text-ink-2 { color: var(--text-secondary) !important; }
+.text-ink-3 { color: var(--text-muted) !important; }
+.text-ok    { color: var(--st-ok) !important; }
+.text-danger  { color: var(--st-danger) !important; }
+.text-caution { color: var(--st-caution) !important; }
+.text-info    { color: var(--st-info) !important; }
+.text-accent    { color: var(--brand-primary) !important; }
+.text-accent-ink { color: var(--brand-primary-ink) !important; }
+
+/* ── Background colors ── */
+.bg-surface   { background-color: var(--surface) !important; }
+.bg-surface-2 { background-color: var(--surface-2) !important; }
+.bg-bg        { background-color: var(--bg) !important; }
+.bg-accent      { background-color: var(--brand-primary) !important; }
+.bg-accent-soft { background-color: var(--accent-soft) !important; }
+.bg-ok-soft     { background-color: var(--st-ok-soft) !important; }
+.bg-danger-soft { background-color: var(--st-danger-soft) !important; }
+.bg-caution-soft { background-color: var(--st-caution-soft) !important; }
+.bg-info-soft   { background-color: var(--st-info-soft) !important; }
+
+/* ── Border colors ── */
+.border-line    { border-color: var(--border) !important; }
+.border-accent  { border-color: var(--brand-primary) !important; }
+.border-l-accent { border-left-color: var(--brand-primary) !important; }
+.border-ok      { border-color: var(--st-ok) !important; }
+.border-danger  { border-color: var(--st-danger) !important; }
+
+/* Tailwind 슬래시 이스케이프 패턴 */
+.border-line\/50 { border-color: rgba(220, 220, 215, 0.5) !important; }
+
+/* ── Hover utilities ── */
+.hover\:bg-surface-2:hover { background-color: var(--surface-2) !important; }
+.hover\:text-ink:hover     { color: var(--text-primary) !important; }
