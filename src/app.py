@@ -1,10 +1,11 @@
 """
 FastAPI 앱 + 라우터
 """
+import csv
 import io
 import tempfile
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
@@ -321,36 +322,73 @@ async def upload_costs(file: UploadFile = File(...)):
 
 
 @app.get("/costs", response_class=HTMLResponse)
-async def cost_manage(request: Request, vid: Optional[int] = None):
-    products = db.get_products_with_cost_status()
-    selected_vid = vid if vid else (products[0]["vendor_item_id"] if products else None)
-    costs = db.get_product_costs(selected_vid) if selected_vid else []
-    selected_product = None
-    if selected_vid:
-        selected_product = db.get_product(selected_vid)
-    return templates.TemplateResponse(request, "cost_manage.html", {
-        "products": products,
-        "selected_vid": selected_vid,
-        "selected_product": selected_product,
-        "costs": costs,
-    })
-
-
-@app.get("/costs/bulk", response_class=HTMLResponse)
-async def cost_bulk(request: Request, filter: Optional[str] = None, q: Optional[str] = None):
-    """원가 일괄 입력 페이지"""
-    products = db.get_products_with_cost_status()
-    if filter == "no_cost":
-        products = [p for p in products if p["cost_count"] == 0]
-    if q:
-        q_lower = q.lower()
-        products = [p for p in products if q_lower in (p.get("display_name") or "").lower()]
-    return templates.TemplateResponse(request, "cost_bulk.html", {
-        "products": products,
-        "filter": filter or "all",
-        "q": q or "",
+async def cost_sheet(request: Request, tab: Optional[str] = None, vid: Optional[int] = None):
+    """원가 관리 — 스프레드시트 + 이력 조회"""
+    all_costs = db.get_all_latest_costs()
+    # 이력 조회 탭
+    history_costs = []
+    history_product = None
+    if tab == "history" and vid:
+        history_costs = db.get_product_costs(vid)
+        history_product = db.get_product(vid)
+    return templates.TemplateResponse(request, "cost_sheet.html", {
+        "all_costs": all_costs,
+        "tab": tab or "sheet",
         "today": date.today().isoformat(),
+        "history_vid": vid,
+        "history_costs": history_costs,
+        "history_product": history_product,
     })
+
+
+@app.get("/costs/bulk")
+async def cost_bulk_redirect():
+    """하위호환: /costs/bulk → /costs 리다이렉트"""
+    return RedirectResponse(url="/costs", status_code=301)
+
+
+@app.get("/api/costs/csv")
+async def api_costs_csv():
+    """전 상품 최신 원가 CSV 다운로드"""
+    all_costs = db.get_all_latest_costs()
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "vendor_item_id", "상품명", "적용시작일", "판매가",
+        "위안단가", "환율", "매입원가", "판매수수료",
+        "입출고수수료", "기타비용", "메모", "개당순마진",
+    ])
+    for r in all_costs:
+        writer.writerow([
+            r["vendor_item_id"], r["display_name"],
+            r.get("effective_from") or "",
+            r.get("sale_price") or "",
+            r.get("purchase_cost_fx") or "",
+            r.get("fx_rate") or "",
+            r.get("purchase_cost") or "",
+            r.get("commission_fee") or "",
+            r.get("fulfillment_fee") or "",
+            r.get("other_unit_cost") or "",
+            r.get("memo") or "",
+            r.get("unit_margin") or "",
+        ])
+    buf = io.BytesIO(output.getvalue().encode("utf-8-sig"))
+    return StreamingResponse(
+        buf,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": 'attachment; filename="cost_master.csv"'},
+    )
+
+
+@app.post("/api/costs/csv")
+async def api_upload_costs_csv(request: Request):
+    """CSV 업로드 → 파싱 → bulk_upsert_costs"""
+    data = await request.json()
+    rows = data.get("rows", [])
+    if not rows:
+        raise HTTPException(400, "저장할 데이터가 없습니다")
+    result = db.bulk_upsert_costs(rows)
+    return JSONResponse(content=result)
 
 
 # ──────────────── API 라우트 ────────────────

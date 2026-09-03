@@ -1318,6 +1318,163 @@ input[type="file"]::file-selector-button:hover {
 .period-rank-medal--silver { background: #E8E8E4; color: #585958; }
 .period-rank-medal--bronze { background: #FFE5D5; color: #9C4221; }
 
+/* ═══════════════════════════════════════════════════════════════
+   원가 스프레드시트 — 인라인 편집
+   ═══════════════════════════════════════════════════════════════ */
+
+/* 툴바 */
+.cost-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cost-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+.cost-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cost-common-fields {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 스프레드시트 카드: 패딩 없이 테이블 꽉 채움 */
+.cost-sheet-card { overflow: hidden; }
+.cost-sheet-card .overflow-x-auto { overflow-x: auto; }
+
+/* 잠금 셀 */
+.cost-cell-lock {
+  background: var(--surface-2);
+  cursor: default;
+  user-select: text;
+}
+
+/* 편집 셀 */
+.cost-cell-edit {
+  position: relative;
+  cursor: text;
+  padding: 0 !important;
+}
+.cost-cell-edit .cell-display {
+  display: block;
+  padding: 16px 12px;
+  min-height: 49px;
+  cursor: text;
+  font-variant-numeric: tabular-nums;
+}
+.cost-cell-edit .cell-input {
+  display: none;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  padding: 14px 10px;
+  font-size: 13px;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.cost-cell-edit .cell-input:focus {
+  outline: none;
+  border: none;
+  box-shadow: inset 0 0 0 2px var(--accent);
+}
+.cost-cell-edit:hover {
+  background: var(--accent-soft);
+}
+
+/* 변경된 셀 */
+.cost-cell-dirty {
+  background: var(--st-caution-soft) !important;
+}
+.cost-cell-dirty .cell-display {
+  font-weight: var(--fw-semibold);
+}
+
+/* 상태 아이콘 (원형) */
+.cost-status-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  line-height: 20px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+.cost-status--ok {
+  background: var(--st-ok-soft);
+  color: var(--st-ok);
+}
+.cost-status--ok::before { content: '\2713'; }  /* ✓ */
+.cost-status--caution {
+  background: var(--st-caution-soft);
+  color: var(--st-caution);
+}
+.cost-status--caution::before { content: '\26A0'; font-size: 11px; }  /* ⚠ */
+.cost-status--dirty {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.cost-status--dirty::before { content: '\270E'; }  /* ✎ */
+
+/* 하단 sticky 액션 바 */
+.cost-action-bar {
+  position: fixed;
+  bottom: 0;
+  left: var(--sidebar-w);
+  right: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -2px 12px rgba(0,0,0,.08);
+  transform: translateY(100%);
+  transition: transform .25s ease;
+  z-index: 30;
+}
+.cost-action-bar.visible {
+  transform: translateY(0);
+}
+.cost-action-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 28px;
+}
+.cost-action-count {
+  font-size: 14px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+.cost-action-count b {
+  color: var(--accent);
+  font-weight: var(--fw-extra);
+}
+
+/* 스프레드시트 테이블 밀도 */
+.cost-sheet th { padding: 10px 12px 8px; }
+.cost-sheet td { padding: 0; }
+.cost-sheet .cost-cell-lock { padding: 16px 12px; }
+.cost-sheet .cost-status-cell { padding: 12px 8px; }
+.cost-sheet td.center:last-child { padding: 12px 8px; }
+
+@media (max-width: 1023px) {
+  .cost-action-bar { left: 0; }
+  .cost-action-bar-inner { padding: 12px 16px; }
+  .cost-toolbar { flex-direction: column; align-items: stretch; }
+  .cost-toolbar-left { flex-wrap: wrap; }
+  .cost-toolbar-right { justify-content: flex-end; }
+  .cost-common-fields { flex-wrap: wrap; }
+}
+
 @media (max-width: 1023px) {
   .period-ranking-grid {
     grid-template-columns: 1fr;

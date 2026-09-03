@@ -1,0 +1,726 @@
+{% extends "base.html" %}
+{% block title %}원가 관리 — 쿠팡 순이익{% endblock %}
+{% block nav_costs %}active{% endblock %}
+{% block page_title %}원가 관리{% endblock %}
+{% block page_subtitle %}스프레드시트{% endblock %}
+
+{% block page_tabs %}
+<div class="ds-page-tabs">
+    <a href="/costs" class="ds-page-tab {% if tab == 'sheet' %}active{% endif %}">스프레드시트</a>
+    <a href="/costs?tab=history" class="ds-page-tab {% if tab == 'history' %}active{% endif %}">이력 조회</a>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if tab == 'sheet' %}
+{# ═══════════════ 스프레드시트 탭 ═══════════════ #}
+
+{# ── 상단 툴바 ── #}
+<div class="ds-card">
+    <div class="ds-card-body" style="padding:14px 20px">
+        <div class="cost-toolbar">
+            <div class="cost-toolbar-left">
+                <div class="cost-search-wrap">
+                    <input type="text" id="cost-search" class="ds-input ds-input--sm"
+                           placeholder="상품 검색..." style="width:180px" oninput="filterSheet(this.value)">
+                </div>
+                <div class="cost-filter-pills" id="filter-pills">
+                    <button class="ds-pill active" data-filter="all" onclick="setFilter('all',this)">전체 <b id="cnt-all">0</b></button>
+                    <button class="ds-pill" data-filter="missing" onclick="setFilter('missing',this)">미입력</button>
+                    <button class="ds-pill" data-filter="dirty" onclick="setFilter('dirty',this)">수정됨</button>
+                </div>
+            </div>
+            <div class="cost-toolbar-right">
+                <div class="cost-common-fields">
+                    <label class="ds-label" style="margin:0">적용일</label>
+                    <input type="date" id="common-date" value="{{ today }}" class="ds-input ds-input--sm" style="width:140px">
+                    <label class="ds-label" style="margin:0">환율</label>
+                    <input type="number" step="0.01" id="common-fx-rate" value="330"
+                           class="ds-input ds-input--sm" style="width:80px" oninput="recalcAllFx()">
+                </div>
+                <a href="/api/costs/csv" class="ds-btn ds-btn--secondary ds-btn--sm" title="CSV 다운로드">CSV</a>
+                <label class="ds-btn ds-btn--secondary ds-btn--sm" title="CSV 업로드" style="cursor:pointer">
+                    CSV
+                    <input type="file" accept=".csv" id="csv-upload" style="display:none" onchange="handleCsvUpload(this)">
+                </label>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ── 스프레드시트 테이블 ── #}
+<div class="ds-card cost-sheet-card">
+    <div class="overflow-x-auto">
+        <table class="ds-table cost-sheet" id="cost-table">
+            <thead>
+                <tr>
+                    <th class="center" style="width:40px;cursor:pointer" onclick="sortTable('status')">
+                        <span class="sort-icon">↕</span>
+                    </th>
+                    <th style="min-width:120px;cursor:pointer" onclick="sortTable('name')">
+                        상품명 <span class="sort-icon">↕</span>
+                    </th>
+                    <th style="width:110px">VID</th>
+                    <th class="right cost-col-edit" style="width:90px;cursor:pointer" onclick="sortTable('sale_price')">
+                        판매가 <span class="sort-icon">↕</span>
+                    </th>
+                    <th class="right cost-col-edit" style="width:80px">위안</th>
+                    <th class="right cost-col-edit" style="width:70px">환율</th>
+                    <th class="right cost-col-edit" style="width:90px">매입원가</th>
+                    <th class="right cost-col-edit" style="width:80px">수수료</th>
+                    <th class="right cost-col-edit" style="width:80px">입출고</th>
+                    <th class="right cost-col-edit" style="width:70px">기타</th>
+                    <th style="width:100px" class="cost-col-edit">메모</th>
+                    <th class="right" style="width:90px;cursor:pointer" onclick="sortTable('margin')">
+                        순마진 <span class="sort-icon">↕</span>
+                    </th>
+                    <th class="center" style="width:50px">이력</th>
+                </tr>
+            </thead>
+            <tbody id="cost-tbody">
+                {% for r in all_costs %}
+                <tr class="cost-row"
+                    data-vid="{{ r.vendor_item_id }}"
+                    data-name="{{ r.display_name }}"
+                    data-api-sale="{{ r.api_sale_price or '' }}"
+                    data-api-comm="{{ r.api_commission_fee or '' }}"
+                    data-orig='{{ {
+                        "sale_price": r.sale_price,
+                        "purchase_cost_fx": r.purchase_cost_fx,
+                        "fx_rate": r.fx_rate,
+                        "purchase_cost": r.purchase_cost,
+                        "commission_fee": r.commission_fee,
+                        "fulfillment_fee": r.fulfillment_fee,
+                        "other_unit_cost": r.other_unit_cost,
+                        "memo": r.memo
+                    }|tojson }}'>
+                    {# 상태 아이콘 #}
+                    <td class="center cost-status-cell">
+                        {% if r.sale_price is not none and r.purchase_cost is not none %}
+                        <span class="cost-status-icon cost-status--ok" title="등록 완료"></span>
+                        {% else %}
+                        <span class="cost-status-icon cost-status--caution" title="미입력"></span>
+                        {% endif %}
+                    </td>
+                    {# 상품명 (잠금) #}
+                    <td class="cost-cell-lock">
+                        <div class="font-semibold ds-truncate" style="max-width:180px" title="{{ r.display_name }}">{{ r.display_name }}</div>
+                    </td>
+                    {# VID (잠금) #}
+                    <td class="cost-cell-lock ds-mono" style="font-size:12px;color:var(--text-muted)">{{ r.vendor_item_id }}</td>
+                    {# 판매가 #}
+                    <td class="right cost-cell-edit" data-field="sale_price">
+                        <span class="cell-display">{{ r.sale_price|fmt if r.sale_price is not none else '' }}</span>
+                        <input type="number" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.sale_price if r.sale_price is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 위안단가 #}
+                    <td class="right cost-cell-edit" data-field="purchase_cost_fx">
+                        <span class="cell-display">{{ r.purchase_cost_fx if r.purchase_cost_fx is not none else '' }}</span>
+                        <input type="number" step="0.01" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.purchase_cost_fx if r.purchase_cost_fx is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 환율 #}
+                    <td class="right cost-cell-edit" data-field="fx_rate">
+                        <span class="cell-display">{{ r.fx_rate if r.fx_rate is not none else '330' }}</span>
+                        <input type="number" step="0.01" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.fx_rate if r.fx_rate is not none else '330' }}" tabindex="-1">
+                    </td>
+                    {# 매입원가 #}
+                    <td class="right cost-cell-edit" data-field="purchase_cost">
+                        <span class="cell-display">{{ r.purchase_cost|fmt if r.purchase_cost is not none else '' }}</span>
+                        <input type="number" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.purchase_cost if r.purchase_cost is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 수수료 #}
+                    <td class="right cost-cell-edit" data-field="commission_fee">
+                        <span class="cell-display">{{ r.commission_fee|fmt if r.commission_fee is not none else '' }}</span>
+                        <input type="number" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.commission_fee if r.commission_fee is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 입출고 #}
+                    <td class="right cost-cell-edit" data-field="fulfillment_fee">
+                        <span class="cell-display">{{ r.fulfillment_fee|fmt if r.fulfillment_fee is not none else '' }}</span>
+                        <input type="number" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.fulfillment_fee if r.fulfillment_fee is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 기타 #}
+                    <td class="right cost-cell-edit" data-field="other_unit_cost">
+                        <span class="cell-display">{{ r.other_unit_cost|fmt if r.other_unit_cost is not none else '' }}</span>
+                        <input type="number" class="cell-input ds-input ds-input--sm" style="text-align:right"
+                               value="{{ r.other_unit_cost if r.other_unit_cost is not none else '' }}" tabindex="-1">
+                    </td>
+                    {# 메모 #}
+                    <td class="cost-cell-edit" data-field="memo">
+                        <span class="cell-display">{{ r.memo or '' }}</span>
+                        <input type="text" class="cell-input ds-input ds-input--sm"
+                               value="{{ r.memo or '' }}" tabindex="-1">
+                    </td>
+                    {# 순마진 (잠금, 자동 계산) #}
+                    <td class="right cost-cell-lock cost-margin-cell font-semibold {% if r.unit_margin is not none and r.unit_margin < 0 %}num-negative{% elif r.unit_margin is not none %}num-primary{% else %}text-ink-3{% endif %}">
+                        {{ r.unit_margin|fmt if r.unit_margin is not none else '-' }}
+                    </td>
+                    {# 이력 #}
+                    <td class="center">
+                        {% if r.cost_count > 0 %}
+                        <a href="/costs?tab=history&vid={{ r.vendor_item_id }}" class="ds-badge ds-badge--ok" style="text-decoration:none">{{ r.cost_count }}건</a>
+                        {% else %}
+                        <span class="ds-badge ds-badge--neutral">0건</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% if not all_costs %}
+        <div class="ds-empty"><div class="ds-empty-title">등록된 상품이 없습니다</div></div>
+        {% endif %}
+    </div>
+</div>
+
+{# ── 하단 액션 바 ── #}
+<div class="cost-action-bar" id="action-bar">
+    <div class="cost-action-bar-inner">
+        <span class="cost-action-count">변경 <b id="dirty-count">0</b>건</span>
+        <button onclick="revertAll()" class="ds-btn ds-btn--secondary ds-btn--sm">되돌리기</button>
+        <button onclick="saveAll()" class="ds-btn ds-btn--primary ds-btn--sm" id="btn-save-all">전체 저장</button>
+    </div>
+</div>
+
+{# ── 결과 모달 ── #}
+<div id="result-modal" class="ds-overlay">
+    <div class="ds-modal">
+        <div class="ds-modal-header"><h3 id="result-title">저장 완료</h3></div>
+        <div class="ds-modal-body" id="result-body"></div>
+        <div class="ds-modal-footer">
+            <button onclick="closeModal()" class="ds-btn ds-btn--primary ds-btn--sm">확인</button>
+        </div>
+    </div>
+</div>
+
+{% elif tab == 'history' %}
+{# ═══════════════ 이력 조회 탭 ═══════════════ #}
+
+<div class="ds-card">
+    <div class="ds-card-body" style="padding:14px 20px">
+        <div class="flex flex-wrap items-center gap-3">
+            <label class="ds-label" style="margin:0">상품 선택</label>
+            <select id="history-select" class="ds-select" style="min-width:240px" onchange="goHistory(this.value)">
+                <option value="">-- 상품을 선택하세요 --</option>
+                {% for r in all_costs %}
+                <option value="{{ r.vendor_item_id }}" {% if history_vid == r.vendor_item_id %}selected{% endif %}>
+                    {{ r.display_name }} ({{ r.vendor_item_id }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+</div>
+
+{% if history_product %}
+<div class="ds-card">
+    <div class="ds-card-header">
+        <h2>{{ history_product.display_name }}</h2>
+        <span class="ds-card-meta">VID {{ history_product.vendor_item_id }}</span>
+    </div>
+    {% if history_costs %}
+    <div class="overflow-x-auto">
+        <table class="ds-table">
+            <thead>
+                <tr>
+                    <th>적용시작일</th>
+                    <th class="right">판매가</th>
+                    <th class="right">위안단가</th>
+                    <th class="right">환율</th>
+                    <th class="right">매입원가</th>
+                    <th class="right">수수료</th>
+                    <th class="right">입출고</th>
+                    <th class="right">기타</th>
+                    <th class="right">순마진</th>
+                    <th>메모</th>
+                    <th class="center">작업</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in history_costs %}
+                <tr>
+                    <td class="text-ink font-semibold">{{ c.effective_from }}</td>
+                    <td class="right">{{ c.sale_price|fmt }}</td>
+                    <td class="right">{{ c.purchase_cost_fx if c.purchase_cost_fx else '-' }}</td>
+                    <td class="right">{{ c.fx_rate if c.fx_rate else '-' }}</td>
+                    <td class="right">{{ c.purchase_cost|fmt }}</td>
+                    <td class="right">{{ c.commission_fee|fmt }}</td>
+                    <td class="right">{{ c.fulfillment_fee|fmt }}</td>
+                    <td class="right">{{ c.other_unit_cost|fmt }}</td>
+                    <td class="right font-semibold {% if c.unit_margin is not none and c.unit_margin < 0 %}num-negative{% else %}num-primary{% endif %}">
+                        {{ c.unit_margin|fmt }}
+                    </td>
+                    <td class="text-ink-3" style="max-width:120px">{{ c.memo or '' }}</td>
+                    <td class="center">
+                        <button onclick="deleteCost({{ c.id }})" class="ds-btn ds-btn--danger ds-btn--sm" style="padding:2px 8px;font-size:12px">삭제</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="ds-empty"><div class="ds-empty-title">원가 이력이 없습니다</div></div>
+    {% endif %}
+</div>
+{% elif history_vid is none %}
+<div class="ds-card">
+    <div class="ds-empty">
+        <div class="ds-empty-icon">&#8361;</div>
+        <div class="ds-empty-title">상품을 선택하면 원가 이력이 표시됩니다</div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+{% if tab == 'sheet' %}
+/* ═══════════════ 스프레드시트 JS ═══════════════ */
+
+const dirtyRows = new Set();
+let currentFilter = 'all';
+let currentSort = { col: null, asc: true };
+
+/* ── 초기화 ── */
+document.addEventListener('DOMContentLoaded', () => {
+    initInlineEdit();
+    updateCounts();
+});
+
+/* ── 인라인 편집: 셀 클릭 → input 표시 ── */
+function initInlineEdit() {
+    document.querySelectorAll('.cost-cell-edit').forEach(td => {
+        const display = td.querySelector('.cell-display');
+        const input = td.querySelector('.cell-input');
+        if (!display || !input) return;
+
+        display.addEventListener('click', () => activateCell(td));
+        input.addEventListener('blur', () => deactivateCell(td));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') { input.blur(); }
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                input.blur();
+                const next = e.shiftKey ? getPrevEditCell(td) : getNextEditCell(td);
+                if (next) activateCell(next);
+            }
+            if (e.key === 'Escape') {
+                // 원래값 복구
+                const row = td.closest('tr');
+                const orig = JSON.parse(row.dataset.orig);
+                const field = td.dataset.field;
+                input.value = orig[field] != null ? orig[field] : '';
+                input.blur();
+            }
+        });
+    });
+}
+
+function activateCell(td) {
+    const display = td.querySelector('.cell-display');
+    const input = td.querySelector('.cell-input');
+    display.style.display = 'none';
+    input.style.display = 'block';
+    input.tabIndex = 0;
+    input.focus();
+    input.select();
+}
+
+function deactivateCell(td) {
+    const display = td.querySelector('.cell-display');
+    const input = td.querySelector('.cell-input');
+    const row = td.closest('tr');
+    const field = td.dataset.field;
+
+    // 위안 × 환율 → 매입원가 자동계산
+    if (field === 'purchase_cost_fx' || field === 'fx_rate') {
+        autoCalcPurchaseCost(row);
+    }
+
+    // display 값 갱신
+    const val = input.value;
+    if (field === 'memo') {
+        display.textContent = val;
+    } else {
+        const num = parseFloat(val);
+        display.textContent = !isNaN(num) ? num.toLocaleString() : '';
+    }
+
+    display.style.display = '';
+    input.style.display = '';
+    input.tabIndex = -1;
+
+    // 변경 체크
+    checkDirty(row);
+    recalcMargin(row);
+    updateCounts();
+}
+
+function autoCalcPurchaseCost(row) {
+    const fxCell = row.querySelector('[data-field="purchase_cost_fx"]');
+    const rateCell = row.querySelector('[data-field="fx_rate"]');
+    const costCell = row.querySelector('[data-field="purchase_cost"]');
+    const fx = parseFloat(fxCell.querySelector('.cell-input').value);
+    const rate = parseFloat(rateCell.querySelector('.cell-input').value);
+    if (fx > 0 && rate > 0) {
+        const cost = Math.round(fx * rate);
+        costCell.querySelector('.cell-input').value = cost;
+        costCell.querySelector('.cell-display').textContent = cost.toLocaleString();
+    }
+}
+
+function recalcMargin(row) {
+    const getVal = (f) => parseFloat(row.querySelector(`[data-field="${f}"] .cell-input`)?.value) || 0;
+    const sp = getVal('sale_price');
+    const pc = getVal('purchase_cost');
+    const cm = getVal('commission_fee');
+    const ff = getVal('fulfillment_fee');
+    const ot = getVal('other_unit_cost');
+    const marginCell = row.querySelector('.cost-margin-cell');
+    if (sp > 0 && pc > 0) {
+        const margin = sp - pc - cm - ff - ot;
+        marginCell.textContent = margin.toLocaleString();
+        marginCell.className = 'right cost-cell-lock cost-margin-cell font-semibold ' +
+            (margin < 0 ? 'num-negative' : 'num-primary');
+    } else {
+        marginCell.textContent = '-';
+        marginCell.className = 'right cost-cell-lock cost-margin-cell font-semibold text-ink-3';
+    }
+}
+
+function checkDirty(row) {
+    const orig = JSON.parse(row.dataset.orig);
+    const vid = row.dataset.vid;
+    let isDirty = false;
+    row.querySelectorAll('.cost-cell-edit').forEach(td => {
+        const field = td.dataset.field;
+        const input = td.querySelector('.cell-input');
+        const origVal = orig[field];
+        const curVal = input.value;
+        let changed = false;
+        if (field === 'memo') {
+            changed = (curVal || '') !== (origVal || '');
+        } else {
+            const origNum = origVal != null ? parseFloat(origVal) : NaN;
+            const curNum = curVal !== '' ? parseFloat(curVal) : NaN;
+            if (isNaN(origNum) && isNaN(curNum)) changed = false;
+            else if (isNaN(origNum) !== isNaN(curNum)) changed = true;
+            else changed = Math.abs(origNum - curNum) > 0.001;
+        }
+        if (changed) {
+            td.classList.add('cost-cell-dirty');
+            isDirty = true;
+        } else {
+            td.classList.remove('cost-cell-dirty');
+        }
+    });
+    // 상태 아이콘 갱신
+    const statusCell = row.querySelector('.cost-status-cell');
+    if (isDirty) {
+        dirtyRows.add(vid);
+        statusCell.innerHTML = '<span class="cost-status-icon cost-status--dirty" title="수정됨"></span>';
+    } else {
+        dirtyRows.delete(vid);
+        const sp = parseFloat(row.querySelector('[data-field="sale_price"] .cell-input').value);
+        const pc = parseFloat(row.querySelector('[data-field="purchase_cost"] .cell-input').value);
+        if (sp > 0 && pc > 0) {
+            statusCell.innerHTML = '<span class="cost-status-icon cost-status--ok" title="등록 완료"></span>';
+        } else {
+            statusCell.innerHTML = '<span class="cost-status-icon cost-status--caution" title="미입력"></span>';
+        }
+    }
+}
+
+/* ── Tab 이동 헬퍼 ── */
+function getNextEditCell(current) {
+    const allCells = [...document.querySelectorAll('.cost-cell-edit')];
+    const visibleCells = allCells.filter(c => c.closest('tr').style.display !== 'none');
+    const idx = visibleCells.indexOf(current);
+    return idx >= 0 && idx < visibleCells.length - 1 ? visibleCells[idx + 1] : null;
+}
+function getPrevEditCell(current) {
+    const allCells = [...document.querySelectorAll('.cost-cell-edit')];
+    const visibleCells = allCells.filter(c => c.closest('tr').style.display !== 'none');
+    const idx = visibleCells.indexOf(current);
+    return idx > 0 ? visibleCells[idx - 1] : null;
+}
+
+/* ── 카운트 업데이트 ── */
+function updateCounts() {
+    const total = document.querySelectorAll('.cost-row').length;
+    document.getElementById('cnt-all').textContent = total;
+    document.getElementById('dirty-count').textContent = dirtyRows.size;
+    const bar = document.getElementById('action-bar');
+    if (dirtyRows.size > 0) {
+        bar.classList.add('visible');
+    } else {
+        bar.classList.remove('visible');
+    }
+}
+
+/* ── 검색 ── */
+function filterSheet(q) {
+    const lower = q.toLowerCase();
+    document.querySelectorAll('.cost-row').forEach(row => {
+        const name = row.dataset.name.toLowerCase();
+        const vid = row.dataset.vid;
+        const match = name.includes(lower) || vid.includes(lower);
+        row.style.display = match ? '' : 'none';
+    });
+    applyFilter();
+}
+
+/* ── 필터 pill ── */
+function setFilter(f, btn) {
+    currentFilter = f;
+    document.querySelectorAll('#filter-pills .ds-pill').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    applyFilter();
+}
+function applyFilter() {
+    const q = document.getElementById('cost-search').value.toLowerCase();
+    document.querySelectorAll('.cost-row').forEach(row => {
+        const name = row.dataset.name.toLowerCase();
+        const vid = row.dataset.vid;
+        const matchSearch = !q || name.includes(q) || vid.includes(q);
+        if (!matchSearch) { row.style.display = 'none'; return; }
+
+        const icon = row.querySelector('.cost-status-icon');
+        const isMissing = icon && icon.classList.contains('cost-status--caution');
+        const isDirty = icon && icon.classList.contains('cost-status--dirty');
+
+        if (currentFilter === 'missing') row.style.display = isMissing ? '' : 'none';
+        else if (currentFilter === 'dirty') row.style.display = isDirty ? '' : 'none';
+        else row.style.display = '';
+    });
+}
+
+/* ── 정렬 ── */
+function sortTable(col) {
+    if (currentSort.col === col) currentSort.asc = !currentSort.asc;
+    else { currentSort.col = col; currentSort.asc = true; }
+
+    const tbody = document.getElementById('cost-tbody');
+    const rows = [...tbody.querySelectorAll('.cost-row')];
+    rows.sort((a, b) => {
+        let va, vb;
+        if (col === 'status') {
+            const order = { 'cost-status--caution': 0, 'cost-status--dirty': 1, 'cost-status--ok': 2 };
+            const iconA = a.querySelector('.cost-status-icon');
+            const iconB = b.querySelector('.cost-status-icon');
+            va = iconA ? (order[iconA.classList[1]] ?? 2) : 2;
+            vb = iconB ? (order[iconB.classList[1]] ?? 2) : 2;
+        } else if (col === 'name') {
+            va = a.dataset.name;
+            vb = b.dataset.name;
+            return currentSort.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+        } else if (col === 'sale_price') {
+            va = parseFloat(a.querySelector('[data-field="sale_price"] .cell-input').value) || 0;
+            vb = parseFloat(b.querySelector('[data-field="sale_price"] .cell-input').value) || 0;
+        } else if (col === 'margin') {
+            const getM = (r) => {
+                const t = r.querySelector('.cost-margin-cell').textContent.replace(/,/g,'').trim();
+                return t === '-' ? -Infinity : parseFloat(t) || 0;
+            };
+            va = getM(a); vb = getM(b);
+        }
+        return currentSort.asc ? va - vb : vb - va;
+    });
+    rows.forEach(r => tbody.appendChild(r));
+}
+
+/* ── 공통 환율 변경 → 전행 재계산 ── */
+function recalcAllFx() {
+    const rate = parseFloat(document.getElementById('common-fx-rate').value) || 330;
+    document.querySelectorAll('.cost-row').forEach(row => {
+        const rateCell = row.querySelector('[data-field="fx_rate"]');
+        const rateInput = rateCell.querySelector('.cell-input');
+        const orig = JSON.parse(row.dataset.orig);
+        // 현재 환율이 원래값(또는 기본330)이면 공통환율로 갱신
+        const curRate = parseFloat(rateInput.value) || 330;
+        const origRate = orig.fx_rate != null ? parseFloat(orig.fx_rate) : 330;
+        if (Math.abs(curRate - origRate) < 0.01 || curRate === 330) {
+            rateInput.value = rate;
+            rateCell.querySelector('.cell-display').textContent = rate;
+            autoCalcPurchaseCost(row);
+            checkDirty(row);
+            recalcMargin(row);
+        }
+    });
+    updateCounts();
+}
+
+/* ── 되돌리기 ── */
+function revertAll() {
+    document.querySelectorAll('.cost-row').forEach(row => {
+        const orig = JSON.parse(row.dataset.orig);
+        row.querySelectorAll('.cost-cell-edit').forEach(td => {
+            const field = td.dataset.field;
+            const input = td.querySelector('.cell-input');
+            const display = td.querySelector('.cell-display');
+            const val = orig[field];
+            if (field === 'memo') {
+                input.value = val || '';
+                display.textContent = val || '';
+            } else {
+                input.value = val != null ? val : '';
+                display.textContent = val != null ? parseFloat(val).toLocaleString() : '';
+            }
+            td.classList.remove('cost-cell-dirty');
+        });
+        checkDirty(row);
+        recalcMargin(row);
+    });
+    dirtyRows.clear();
+    updateCounts();
+}
+
+/* ── 전체 저장 ── */
+async function saveAll() {
+    const effectiveFrom = document.getElementById('common-date').value;
+    if (!effectiveFrom) { alert('적용일을 입력하세요.'); return; }
+
+    const rows = [];
+    document.querySelectorAll('.cost-row').forEach(row => {
+        if (!dirtyRows.has(row.dataset.vid)) return;
+        const getVal = (f) => {
+            const v = row.querySelector(`[data-field="${f}"] .cell-input`).value;
+            return v !== '' ? parseFloat(v) : null;
+        };
+        const sp = getVal('sale_price');
+        const pc = getVal('purchase_cost');
+        if (sp == null || pc == null) return; // 필수값 없으면 스킵
+        rows.push({
+            vendor_item_id: parseInt(row.dataset.vid),
+            effective_from: effectiveFrom,
+            sale_price: sp,
+            purchase_cost: pc,
+            commission_fee: getVal('commission_fee') || 0,
+            fulfillment_fee: getVal('fulfillment_fee') || 0,
+            other_unit_cost: getVal('other_unit_cost') || 0,
+            purchase_cost_fx: getVal('purchase_cost_fx'),
+            fx_rate: getVal('fx_rate'),
+            memo: row.querySelector('[data-field="memo"] .cell-input').value || null,
+        });
+    });
+
+    if (!rows.length) { alert('저장할 변경 사항이 없습니다.'); return; }
+
+    const btn = document.getElementById('btn-save-all');
+    btn.disabled = true; btn.textContent = '저장 중...';
+    try {
+        const res = await fetch('/api/costs/bulk', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ rows }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+            let h = `<p>신규 등록: <strong>${data.inserted}</strong>건</p>` +
+                    `<p>업데이트: <strong>${data.updated}</strong>건</p>`;
+            if (data.errors?.length) {
+                h += `<p class="mt-2 text-danger">오류 ${data.errors.length}건:</p>` +
+                     `<ul class="text-xs text-danger mt-1" style="list-style:disc;margin-left:16px">`;
+                data.errors.slice(0, 5).forEach(e => h += `<li>${e}</li>`);
+                h += '</ul>';
+            }
+            document.getElementById('result-title').textContent =
+                data.errors?.length ? '저장 완료 (일부 오류)' : '저장 완료';
+            document.getElementById('result-body').innerHTML = h;
+            document.getElementById('result-modal').classList.add('open');
+        } else {
+            alert('오류: ' + (data.detail || '저장 실패'));
+        }
+    } catch (e) { alert('네트워크 오류: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '전체 저장'; }
+}
+
+function closeModal() {
+    document.getElementById('result-modal').classList.remove('open');
+    location.reload();
+}
+
+/* ── CSV 업로드 ── */
+function handleCsvUpload(fileInput) {
+    const file = fileInput.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) { alert('CSV 데이터가 부족합니다.'); return; }
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        // 필드 매핑
+        const fieldMap = {
+            'vendor_item_id': 'vid',
+            '판매가': 'sale_price',
+            '위안단가': 'purchase_cost_fx',
+            '환율': 'fx_rate',
+            '매입원가': 'purchase_cost',
+            '판매수수료': 'commission_fee',
+            '입출고수수료': 'fulfillment_fee',
+            '기타비용': 'other_unit_cost',
+            '메모': 'memo',
+        };
+        const colIdx = {};
+        headers.forEach((h, i) => { if (fieldMap[h]) colIdx[fieldMap[h]] = i; });
+        if (colIdx.vid == null) { alert('vendor_item_id 컬럼이 필요합니다.'); return; }
+
+        let applied = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/"/g, ''));
+            const vid = cols[colIdx.vid];
+            const row = document.querySelector(`.cost-row[data-vid="${vid}"]`);
+            if (!row) continue;
+
+            const fields = ['sale_price', 'purchase_cost_fx', 'fx_rate', 'purchase_cost',
+                           'commission_fee', 'fulfillment_fee', 'other_unit_cost', 'memo'];
+            fields.forEach(f => {
+                if (colIdx[f] == null) return;
+                const val = cols[colIdx[f]];
+                const td = row.querySelector(`[data-field="${f}"]`);
+                if (!td) return;
+                const input = td.querySelector('.cell-input');
+                const display = td.querySelector('.cell-display');
+                if (val !== '' && val !== undefined) {
+                    input.value = val;
+                    if (f === 'memo') display.textContent = val;
+                    else {
+                        const num = parseFloat(val);
+                        display.textContent = !isNaN(num) ? num.toLocaleString() : val;
+                    }
+                }
+            });
+            checkDirty(row);
+            recalcMargin(row);
+            applied++;
+        }
+        updateCounts();
+        alert(`CSV 적용 완료: ${applied}개 상품`);
+    };
+    reader.readAsText(file);
+    fileInput.value = '';
+}
+
+{% elif tab == 'history' %}
+/* ═══════════════ 이력 조회 JS ═══════════════ */
+function goHistory(vid) {
+    if (vid) location.href = '/costs?tab=history&vid=' + vid;
+}
+async function deleteCost(costId) {
+    if (!confirm('이 원가 이력을 삭제하시겠습니까?')) return;
+    const res = await fetch('/api/costs/' + costId, { method: 'DELETE' });
+    if (res.ok) location.reload(); else alert('삭제 실패');
+}
+{% endif %}
+</script>
+{% endblock %}

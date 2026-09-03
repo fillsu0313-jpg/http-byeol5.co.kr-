@@ -159,6 +159,34 @@ def get_products_with_cost_status() -> list[dict]:
         return [dict(r) for r in rows]
 
 
+def get_all_latest_costs() -> list[dict]:
+    """전 상품 + 최신 원가 1건 (스프레드시트 초기 데이터)"""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT p.vendor_item_id, p.display_name, p.is_active,
+                      p.api_sale_price, p.api_commission_fee,
+                      c.effective_from, c.sale_price, c.purchase_cost,
+                      c.purchase_cost_fx, c.fx_rate,
+                      c.commission_fee, c.fulfillment_fee, c.other_unit_cost, c.memo,
+                      CASE WHEN c.id IS NOT NULL
+                           THEN c.sale_price - c.purchase_cost
+                                - COALESCE(c.commission_fee, 0)
+                                - COALESCE(c.fulfillment_fee, 0)
+                                - COALESCE(c.other_unit_cost, 0)
+                           ELSE NULL END AS unit_margin,
+                      (SELECT COUNT(*) FROM product_costs
+                       WHERE vendor_item_id = p.vendor_item_id) AS cost_count
+               FROM products p
+               LEFT JOIN product_costs c
+                    ON c.vendor_item_id = p.vendor_item_id
+                   AND c.effective_from = (
+                         SELECT MAX(effective_from) FROM product_costs
+                         WHERE vendor_item_id = p.vendor_item_id)
+               ORDER BY p.display_name"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_product_costs(vendor_item_id: int) -> list[dict]:
     """원가 이력 (내림차순)"""
     with get_db() as conn:
