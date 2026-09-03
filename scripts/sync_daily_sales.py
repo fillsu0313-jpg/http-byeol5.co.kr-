@@ -64,10 +64,13 @@ def aggregate_daily(
             if not vid:
                 continue
             key = (stat_date, int(vid))
-            qty = item.get("salesQuantity", 0) or 0
-            price = item.get("unitSalesPrice", 0) or 0
+            qty = int(item.get("salesQuantity", 0) or 0)
+            try:
+                price = float(item.get("unitSalesPrice", 0) or 0)
+            except (ValueError, TypeError):
+                price = 0
             agg[key]["units_sold"] += qty
-            agg[key]["gross_revenue"] += price * qty
+            agg[key]["gross_revenue"] += int(price * qty)
 
     # 마켓플레이스: orderedAt은 ISO 문자열
     for order in mp_orders:
