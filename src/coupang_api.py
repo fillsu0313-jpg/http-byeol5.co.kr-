@@ -56,22 +56,40 @@ class CoupangAPI:
             "Content-Type": "application/json;charset=UTF-8",
         }
 
-    def _rate_limit(self):
-        """5 req/sec 제한 대응: 요청 간 최소 0.2초"""
+    def _rate_limit(self, interval: float = 0.2):
+        """요청 간 최소 대기 시간 보장"""
         elapsed = time.time() - self._last_request_time
-        if elapsed < 0.2:
-            time.sleep(0.2 - elapsed)
+        if elapsed < interval:
+            time.sleep(interval - elapsed)
         self._last_request_time = time.time()
 
-    def _get(self, path: str, params: Optional[dict] = None) -> dict:
-        """GET 요청 + 인증 + Rate limit"""
-        self._rate_limit()
+    def _get(
+        self, path: str, params: Optional[dict] = None,
+        rate_interval: float = 0.2, retry_on_429: bool = True,
+    ) -> dict:
+        """GET 요청 + 인증 + Rate limit + 429 자동 재시도"""
+        self._rate_limit(rate_interval)
         query = urlencode(params) if params else ""
         url = BASE_URL + path
         if query:
             url += "?" + query
         headers = self._sign("GET", path, query)
         resp = self._session.get(url, headers=headers, timeout=30)
+
+        if resp.status_code == 429 and retry_on_429:
+            # "Too many request. Try after N seconds"
+            wait = 45
+            try:
+                msg = resp.json().get("message", "")
+                import re
+                m = re.search(r"(\d+)\s*seconds", msg)
+                if m:
+                    wait = int(m.group(1)) + 3
+            except Exception:
+                pass
+            time.sleep(wait)
+            return self._get(path, params, rate_interval, retry_on_429=False)
+
         if resp.status_code != 200:
             raise CoupangAPIError(resp.status_code, resp.text[:500])
         return resp.json()
@@ -184,6 +202,40 @@ class CoupangAPI:
                 break
 
         return all_items
+
+
+    def get_rg_orders(
+        self, date_from: str, date_to: str,
+    ) -> list[dict]:
+        """
+        로켓그로스 주문 목록 조회 (페이징 자동 처리, 최대 30일).
+        date_from, date_to: 'YYYY-MM-DD' 또는 'YYYYMMDD' 형식
+        반환: [{orderId, paidAt, orderItems: [{vendorItemId, salesQuantity, unitSalesPrice, ...}], ...}, ...]
+
+        주의: 서버 IP 화이트리스트 필요 (로컬 PC에서는 403).
+        """
+        # yyyymmdd 형식으로 통일
+        df = date_from.replace("-", "")
+        dt = date_to.replace("-", "")
+
+        path = f"/v2/providers/rg_open_api/apis/api/v1/vendors/{self.vendor_id}/rg/orders"
+        all_orders = []
+        next_token = None
+
+        while True:
+            params = {"paidDateFrom": df, "paidDateTo": dt}
+            if next_token:
+                params["nextToken"] = next_token
+
+            data = self._get(path, params, rate_interval=2.0)
+            orders = data.get("data", [])
+            all_orders.extend(orders)
+
+            next_token = data.get("nextToken")
+            if not next_token or not orders:
+                break
+
+        return all_orders
 
 
 def load_config(config_path: str = None) -> dict:

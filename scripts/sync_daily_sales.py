@@ -1,9 +1,11 @@
 """
 쿠팡 API에서 일별 판매 데이터를 수집하여 daily_sales 테이블에 저장.
 
-- 주문서 API (FINAL_DELIVERY)로 배송완료된 주문 집계
-- (주문일, vendorItemId) 기준 판매량·매출 합산
-- 매출내역 API로 수수료 정보 보충 (향후)
+- 로켓그로스 주문 API (rg_open_api) — 쿠팡 물류 배송 주문 (매출 대부분)
+- 마켓플레이스 주문서 API (ordersheets) — 셀러 직접 배송 주문
+- 두 API 결과를 (결제일, vendorItemId) 기준으로 합산
+
+주의: 로켓그로스 API는 서버 IP 화이트리스트 필요 (로컬 PC 403).
 
 실행:
   python scripts/sync_daily_sales.py                  # 어제 데이터
@@ -24,20 +26,51 @@ from src.coupang_api import create_client, CoupangAPIError
 from src.db import get_db
 
 
-def fetch_orders(api, date_from: str, date_to: str) -> list[dict]:
-    """주문서 API로 배송완료 주문 조회"""
+def fetch_rg_orders(api, date_from: str, date_to: str) -> list[dict]:
+    """로켓그로스 주문 API — 쿠팡 물류 배송 주문"""
+    try:
+        return api.get_rg_orders(date_from, date_to)
+    except CoupangAPIError as e:
+        if e.status_code == 403:
+            print(f"  로켓그로스 API 접근 불가 (IP 화이트리스트 필요): {e}")
+            return []
+        raise
+
+
+def fetch_mp_orders(api, date_from: str, date_to: str) -> list[dict]:
+    """마켓플레이스 주문서 API — 셀러 직접 배송 주문"""
     return api.get_order_sheets(date_from, date_to, status="FINAL_DELIVERY")
 
 
-def aggregate_daily(orders: list[dict]) -> dict[tuple, dict]:
+def aggregate_daily(
+    rg_orders: list[dict], mp_orders: list[dict],
+) -> dict[tuple, dict]:
     """
-    주문 목록을 (주문일, vendorItemId) 기준으로 집계.
+    로켓그로스 + 마켓플레이스 주문을 (결제일, vendorItemId) 기준으로 집계.
     반환: {(stat_date, vendor_item_id): {units_sold, gross_revenue, cancel_units}}
     """
     agg = defaultdict(lambda: {"units_sold": 0, "gross_revenue": 0, "cancel_units": 0})
 
-    for order in orders:
-        # 주문일 추출 (orderedAt: "2026-08-26T02:57:49+09:00" → "2026-08-26")
+    # 로켓그로스: paidAt은 밀리초 타임스탬프
+    for order in rg_orders:
+        paid_at = order.get("paidAt", "")
+        try:
+            stat_date = datetime.fromtimestamp(int(paid_at) / 1000).strftime("%Y-%m-%d")
+        except (ValueError, TypeError, OSError):
+            continue
+
+        for item in order.get("orderItems", []):
+            vid = item.get("vendorItemId")
+            if not vid:
+                continue
+            key = (stat_date, int(vid))
+            qty = item.get("salesQuantity", 0) or 0
+            price = item.get("unitSalesPrice", 0) or 0
+            agg[key]["units_sold"] += qty
+            agg[key]["gross_revenue"] += price * qty
+
+    # 마켓플레이스: orderedAt은 ISO 문자열
+    for order in mp_orders:
         ordered_at = order.get("orderedAt", "")
         if not ordered_at:
             continue
@@ -47,16 +80,15 @@ def aggregate_daily(orders: list[dict]) -> dict[tuple, dict]:
             vid = item.get("vendorItemId")
             if not vid:
                 continue
-
             key = (stat_date, int(vid))
             qty = item.get("shippingCount", 0) or 0
-            price = 0
             sales_price = item.get("salesPrice") or item.get("orderPrice") or {}
             if isinstance(sales_price, dict):
                 price = sales_price.get("units", 0) or 0
             elif isinstance(sales_price, (int, float)):
                 price = sales_price
-
+            else:
+                price = 0
             cancel = item.get("cancelCount", 0) or 0
 
             agg[key]["units_sold"] += qty
@@ -76,29 +108,27 @@ def sync(date_from: str, date_to: str, dry_run: bool = False):
         print(f"\n설정 오류: {e}")
         sys.exit(1)
 
-    # 주문서 조회
-    print("주문서 조회 중...")
+    # 로켓그로스 주문 조회
+    print("로켓그로스 주문 조회 중...")
     try:
-        orders = fetch_orders(api, date_from, date_to)
+        rg_orders = fetch_rg_orders(api, date_from, date_to)
     except CoupangAPIError as e:
-        print(f"\nAPI 오류: {e}")
-        # ingest_log에 실패 기록
-        if not dry_run:
-            with get_db() as conn:
-                conn.execute(
-                    """INSERT INTO ingest_log (stat_date, data_type, source, row_count, status, message)
-                       VALUES (?, 'sales', 'api', 0, 'failed', ?)""",
-                    (date_from, str(e)),
-                )
-        sys.exit(1)
+        print(f"\nAPI 오류 (로켓그로스): {e}")
+        rg_orders = []
 
-    print(f"  주문서: {len(orders)}건")
+    print(f"  로켓그로스: {len(rg_orders)}건")
 
-    # 집계
-    daily = aggregate_daily(orders)
-    print(f"  집계: {len(daily)}개 (상품×일)")
+    # 마켓플레이스 주문 조회
+    print("마켓플레이스 주문 조회 중...")
+    try:
+        mp_orders = fetch_mp_orders(api, date_from, date_to)
+    except CoupangAPIError as e:
+        print(f"\nAPI 오류 (마켓플레이스): {e}")
+        mp_orders = []
 
-    if not daily:
+    print(f"  마켓플레이스: {len(mp_orders)}건")
+
+    if not rg_orders and not mp_orders:
         print("  수집할 데이터 없음.")
         if not dry_run:
             with get_db() as conn:
@@ -109,11 +139,29 @@ def sync(date_from: str, date_to: str, dry_run: bool = False):
                 )
         return
 
+    # 집계
+    daily = aggregate_daily(rg_orders, mp_orders)
+    print(f"  집계: {len(daily)}개 (상품×일)")
+
+    # 날짜 범위
+    dates = sorted(set(d for d, _ in daily.keys()))
+    vids = set(v for _, v in daily.keys())
+    total_units = sum(d["units_sold"] for d in daily.values())
+    total_revenue = sum(d["gross_revenue"] for d in daily.values())
+    print(f"  기간: {dates[0]} ~ {dates[-1]} ({len(dates)}일)")
+    print(f"  상품: {len(vids)}개")
+    print(f"  총 판매수량: {total_units:,}개")
+    print(f"  총 매출: {total_revenue:,.0f}원")
+
     if dry_run:
-        print("\n--- 미리보기 (상위 20개) ---")
-        sorted_items = sorted(daily.items(), key=lambda x: -x[1]["gross_revenue"])
-        for (dt, vid), d in sorted_items[:20]:
-            print(f"  {dt} | {vid} | {d['units_sold']}개 | {d['gross_revenue']:,.0f}원")
+        print("\n--- 일별 요약 ---")
+        by_date = defaultdict(lambda: {"units": 0, "revenue": 0})
+        for (dt, _), d in daily.items():
+            by_date[dt]["units"] += d["units_sold"]
+            by_date[dt]["revenue"] += d["gross_revenue"]
+        for dt in sorted(by_date.keys()):
+            s = by_date[dt]
+            print(f"  {dt} | {s['units']:>4}개 | {s['revenue']:>10,.0f}원")
         print(f"\n[DRY RUN] DB 변경 없음.")
         return
 
@@ -150,7 +198,8 @@ def sync(date_from: str, date_to: str, dry_run: bool = False):
         conn.execute(
             """INSERT INTO ingest_log (stat_date, data_type, source, row_count, status, message)
                VALUES (?, 'sales', 'api', ?, 'ok', ?)""",
-            (date_from, inserted + updated, f"신규 {inserted}, 업데이트 {updated}"),
+            (date_from, inserted + updated,
+             f"RG {len(rg_orders)}건 + MP {len(mp_orders)}건 → 신규 {inserted}, 업데이트 {updated}"),
         )
 
     print(f"\n=== 완료 ===")
