@@ -32,6 +32,9 @@ def _migrate(conn: sqlite3.Connection):
         conn.execute("ALTER TABLE products ADD COLUMN api_sale_price REAL")
     if "api_commission_fee" not in cols:
         conn.execute("ALTER TABLE products ADD COLUMN api_commission_fee REAL")
+    if "rg_vendor_item_id" not in cols:
+        conn.execute("ALTER TABLE products ADD COLUMN rg_vendor_item_id BIGINT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_products_rg_vid ON products(rg_vendor_item_id)")
     _migrated = True
 
 

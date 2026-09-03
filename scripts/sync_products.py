@@ -23,7 +23,8 @@ from src.db import get_db
 def extract_vendor_items(detail: dict, list_info: dict) -> list[dict]:
     """
     상품 상세 API 응답에서 vendorItem 정보 추출.
-    vendorItemId는 items[].marketplaceItemData.vendorItemId에 위치.
+    MP vendorItemId를 PK로, RG vendorItemId를 별도 컬럼으로 저장.
+    RG 주문 API는 RG vendorItemId를 반환하므로 매핑이 필요.
     """
     result = []
     seller_product_id = detail.get("sellerProductId") or list_info.get("sellerProductId")
@@ -32,18 +33,21 @@ def extract_vendor_items(detail: dict, list_info: dict) -> list[dict]:
     status = list_info.get("statusName", "")
 
     for item in detail.get("items", []):
-        vid = item.get("vendorItemId")
-        if not vid:
-            mp = item.get("marketplaceItemData") or {}
-            vid = mp.get("vendorItemId")
-        if not vid:
-            rg = item.get("rocketGrowthItemData") or {}
-            vid = rg.get("vendorItemId")
+        mp = item.get("marketplaceItemData") or {}
+        rg = item.get("rocketGrowthItemData") or {}
+
+        # MP vendorItemId를 기본으로 사용 (PK)
+        mp_vid = mp.get("vendorItemId") or item.get("vendorItemId")
+        rg_vid = rg.get("vendorItemId")
+
+        # MP vid가 없으면 RG vid를 PK로 사용
+        vid = mp_vid or rg_vid
         if not vid:
             continue
 
         result.append({
             "vendor_item_id": int(vid),
+            "rg_vendor_item_id": int(rg_vid) if rg_vid else None,
             "seller_product_id": seller_product_id,
             "product_id": product_id,
             "coupang_name": product_name,
@@ -118,15 +122,17 @@ def sync(dry_run: bool = False):
             conn.execute(
                 """INSERT INTO products
                    (vendor_item_id, seller_product_id, product_id,
-                    coupang_name, display_name, is_active)
-                   VALUES (?, ?, ?, ?, ?, 1)
+                    coupang_name, display_name, is_active, rg_vendor_item_id)
+                   VALUES (?, ?, ?, ?, ?, 1, ?)
                    ON CONFLICT(vendor_item_id) DO UPDATE SET
                     seller_product_id = excluded.seller_product_id,
                     product_id = excluded.product_id,
                     coupang_name = excluded.coupang_name,
+                    rg_vendor_item_id = excluded.rg_vendor_item_id,
                     is_active = 1""",
                 (vi["vendor_item_id"], vi["seller_product_id"],
-                 vi["product_id"], vi["coupang_name"], display),
+                 vi["product_id"], vi["coupang_name"], display,
+                 vi.get("rg_vendor_item_id")),
             )
 
         # API에 없는 기존 상품 비활성화

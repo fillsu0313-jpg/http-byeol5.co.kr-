@@ -44,11 +44,15 @@ def fetch_mp_orders(api, date_from: str, date_to: str) -> list[dict]:
 
 def aggregate_daily(
     rg_orders: list[dict], mp_orders: list[dict],
+    rg_to_mp: dict[int, int] = None,
 ) -> dict[tuple, dict]:
     """
     로켓그로스 + 마켓플레이스 주문을 (결제일, vendorItemId) 기준으로 집계.
+    RG 주문의 vendorItemId는 MP vendorItemId로 변환 (products PK와 일치시키기 위해).
     반환: {(stat_date, vendor_item_id): {units_sold, gross_revenue, cancel_units}}
     """
+    rg_to_mp = rg_to_mp or {}
+    unmapped_rg = set()
     agg = defaultdict(lambda: {"units_sold": 0, "gross_revenue": 0, "cancel_units": 0})
 
     # 로켓그로스: paidAt은 밀리초 타임스탬프
@@ -63,7 +67,12 @@ def aggregate_daily(
             vid = item.get("vendorItemId")
             if not vid:
                 continue
-            key = (stat_date, int(vid))
+            rg_vid = int(vid)
+            # RG vid → MP vid 변환 (매핑 없으면 원본 사용)
+            mp_vid = rg_to_mp.get(rg_vid, rg_vid)
+            if rg_vid not in rg_to_mp:
+                unmapped_rg.add(rg_vid)
+            key = (stat_date, mp_vid)
             qty = int(item.get("salesQuantity", 0) or 0)
             try:
                 price = float(item.get("unitSalesPrice", 0) or 0)
@@ -98,7 +107,18 @@ def aggregate_daily(
             agg[key]["gross_revenue"] += price * qty
             agg[key]["cancel_units"] += cancel
 
+    if unmapped_rg:
+        print(f"  경고: RG→MP 매핑 없는 vendorItemId {len(unmapped_rg)}개 (원본 ID 사용)")
+
     return dict(agg)
+
+
+def build_rg_to_mp_map(conn) -> dict[int, int]:
+    """products 테이블에서 rg_vendor_item_id → vendor_item_id(MP) 매핑 생성"""
+    rows = conn.execute(
+        "SELECT vendor_item_id, rg_vendor_item_id FROM products WHERE rg_vendor_item_id IS NOT NULL"
+    ).fetchall()
+    return {r[1]: r[0] for r in rows}
 
 
 def sync(date_from: str, date_to: str, dry_run: bool = False):
@@ -142,8 +162,13 @@ def sync(date_from: str, date_to: str, dry_run: bool = False):
                 )
         return
 
+    # RG→MP vendorItemId 매핑 로드
+    with get_db() as conn:
+        rg_to_mp = build_rg_to_mp_map(conn)
+    print(f"  RG→MP 매핑: {len(rg_to_mp)}개")
+
     # 집계
-    daily = aggregate_daily(rg_orders, mp_orders)
+    daily = aggregate_daily(rg_orders, mp_orders, rg_to_mp)
     print(f"  집계: {len(daily)}개 (상품×일)")
 
     # 날짜 범위
