@@ -363,6 +363,96 @@ def get_collection_status() -> dict:
         }
 
 
+def get_period_summary(from_date: str, to_date: str) -> dict:
+    """기간 합계: 총순이익, 총판매, 총광고비, 이익상품수, 손실상품수"""
+    with get_db() as conn:
+        row = conn.execute(
+            """SELECT
+                SUM(net_profit) AS total_profit,
+                SUM(units_sold) AS total_units,
+                SUM(ad_spend_vat) AS total_ad_spend,
+                COUNT(DISTINCT CASE WHEN net_profit > 0 THEN vendor_item_id END) AS profit_products,
+                COUNT(DISTINCT CASE WHEN net_profit < 0 THEN vendor_item_id END) AS loss_products,
+                COUNT(DISTINCT vendor_item_id) AS total_products
+            FROM (
+                SELECT s.vendor_item_id,
+                       SUM(CASE WHEN s.units_sold IS NULL THEN NULL
+                            ELSE s.units_sold * (c.sale_price - c.purchase_cost
+                              - COALESCE(c.commission_fee, 0) - COALESCE(c.fulfillment_fee, 0)
+                              - COALESCE(c.other_unit_cost, 0))
+                              - COALESCE(a.ad_spend, 0) * 1.1
+                       END) AS net_profit,
+                       SUM(s.units_sold) AS units_sold,
+                       SUM(COALESCE(a.ad_spend, 0) * 1.1) AS ad_spend_vat
+                FROM daily_sales s
+                LEFT JOIN daily_ads a ON a.stat_date = s.stat_date AND a.vendor_item_id = s.vendor_item_id
+                LEFT JOIN product_costs c ON c.vendor_item_id = s.vendor_item_id
+                      AND c.effective_from = (
+                            SELECT MAX(effective_from) FROM product_costs
+                            WHERE vendor_item_id = s.vendor_item_id AND effective_from <= s.stat_date)
+                WHERE s.stat_date >= ? AND s.stat_date <= ?
+                GROUP BY s.vendor_item_id
+            )""",
+            (from_date, to_date),
+        ).fetchone()
+        return dict(row) if row else {}
+
+
+def get_period_ranking(from_date: str, to_date: str) -> list[dict]:
+    """상품별 기간 누적 순이익 랭킹 (전체, 정렬: DESC)"""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT s.vendor_item_id, p.display_name,
+                      SUM(s.units_sold) AS total_units,
+                      SUM(COALESCE(a.ad_spend, 0)) AS total_ad_spend,
+                      SUM(CASE WHEN s.units_sold IS NULL THEN NULL
+                           ELSE s.units_sold * (c.sale_price - c.purchase_cost
+                             - COALESCE(c.commission_fee, 0) - COALESCE(c.fulfillment_fee, 0)
+                             - COALESCE(c.other_unit_cost, 0))
+                             - COALESCE(a.ad_spend, 0) * 1.1
+                      END) AS net_profit
+               FROM daily_sales s
+               JOIN products p ON p.vendor_item_id = s.vendor_item_id
+               LEFT JOIN daily_ads a ON a.stat_date = s.stat_date AND a.vendor_item_id = s.vendor_item_id
+               LEFT JOIN product_costs c ON c.vendor_item_id = s.vendor_item_id
+                     AND c.effective_from = (
+                           SELECT MAX(effective_from) FROM product_costs
+                           WHERE vendor_item_id = s.vendor_item_id AND effective_from <= s.stat_date)
+               WHERE s.stat_date >= ? AND s.stat_date <= ?
+               GROUP BY s.vendor_item_id
+               ORDER BY net_profit DESC""",
+            (from_date, to_date),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_daily_totals(from_date: str, to_date: str) -> list[dict]:
+    """캘린더용 일별 합계: [{stat_date, total_profit, total_units, product_count}]"""
+    with get_db() as conn:
+        rows = conn.execute(
+            """SELECT s.stat_date,
+                      SUM(CASE WHEN s.units_sold IS NULL THEN NULL
+                           ELSE s.units_sold * (c.sale_price - c.purchase_cost
+                             - COALESCE(c.commission_fee, 0) - COALESCE(c.fulfillment_fee, 0)
+                             - COALESCE(c.other_unit_cost, 0))
+                             - COALESCE(a.ad_spend, 0) * 1.1
+                      END) AS total_profit,
+                      SUM(s.units_sold) AS total_units,
+                      COUNT(DISTINCT s.vendor_item_id) AS product_count
+               FROM daily_sales s
+               LEFT JOIN daily_ads a ON a.stat_date = s.stat_date AND a.vendor_item_id = s.vendor_item_id
+               LEFT JOIN product_costs c ON c.vendor_item_id = s.vendor_item_id
+                     AND c.effective_from = (
+                           SELECT MAX(effective_from) FROM product_costs
+                           WHERE vendor_item_id = s.vendor_item_id AND effective_from <= s.stat_date)
+               WHERE s.stat_date >= ? AND s.stat_date <= ?
+               GROUP BY s.stat_date
+               ORDER BY s.stat_date""",
+            (from_date, to_date),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
 def get_product_daily(vendor_item_id: int, from_date: Optional[str] = None, to_date: Optional[str] = None) -> list[dict]:
     """상품별 일별 데이터 (차트용 필드 포함)"""
     query = """

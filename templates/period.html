@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+{% block title %}기간별 분석 — 쿠팡 순이익{% endblock %}
+{% block nav_period %}active{% endblock %}
+
+{% block page_title %}기간별 분석{% endblock %}
+{% block page_subtitle %}{{ start_display }} ~ {{ end_display }}{% endblock %}
+
+{% block page_tabs %}
+<div class="ds-page-tabs">
+    <a href="/period?period=week" class="ds-page-tab {% if period == 'week' %}active{% endif %}">이번주</a>
+    <a href="/period?period=month" class="ds-page-tab {% if period == 'month' %}active{% endif %}">이번달</a>
+    <a href="/period?period=last_month" class="ds-page-tab {% if period == 'last_month' %}active{% endif %}">지난달</a>
+    <a href="#" class="ds-page-tab {% if period == 'custom' %}active{% endif %}" onclick="event.preventDefault();document.getElementById('customRange').classList.toggle('hidden')">기간설정</a>
+</div>
+<div id="customRange" class="{% if period != 'custom' %}hidden{% endif %}" style="padding:12px 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+    <form method="get" action="/period" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="hidden" name="period" value="custom">
+        <input type="date" name="from_date" value="{{ from_date }}" class="ds-input ds-input--sm" style="width:150px">
+        <span style="color:var(--text-muted)">~</span>
+        <input type="date" name="to_date" value="{{ to_date }}" class="ds-input ds-input--sm" style="width:150px">
+        <button type="submit" class="ds-btn ds-btn--primary ds-btn--sm">조회</button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+{# ── KPI 카드 그리드 ── #}
+{% if summary and summary.total_profit is not none %}
+<div class="ds-kpi-grid">
+    <div class="ds-kpi-hero">
+        <div class="ds-kpi-hero-label">
+            <span class="ds-kpi-hero-label-text">기간 총 순이익</span>
+            <span class="ds-kpi-hero-label-badge">{{ start_display }}~{{ end_display }}</span>
+        </div>
+        <div class="ds-kpi-hero-value">
+            <span class="ds-kpi-hero-number {% if summary.total_profit < 0 %}text-danger{% endif %}">{{ summary.total_profit|round|fmt }}</span>
+            <span class="ds-kpi-hero-unit">원</span>
+        </div>
+    </div>
+
+    <div class="ds-kpi">
+        <div class="ds-kpi-label">총 판매량</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number">{{ summary.total_units|fmt }}</span>
+            <span class="ds-kpi-unit">개</span>
+        </div>
+    </div>
+
+    <div class="ds-kpi">
+        <div class="ds-kpi-label">총 광고비 (VAT포함)</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number">{{ summary.total_ad_spend|round|fmt }}</span>
+            <span class="ds-kpi-unit">원</span>
+        </div>
+    </div>
+
+    <div class="ds-kpi">
+        <div class="ds-kpi-label">이익 / 손실 상품</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number" style="color:var(--st-ok)">{{ summary.profit_products|fmt }}</span>
+            <span class="ds-kpi-unit" style="margin-right:6px">개</span>
+            <span style="color:var(--text-muted);font-size:14px">/</span>
+            <span class="ds-kpi-number" style="color:var(--st-danger);margin-left:6px">{{ summary.loss_products|fmt }}</span>
+            <span class="ds-kpi-unit">개</span>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── 캘린더 그리드 ── #}
+<section class="ds-card" style="padding:20px 24px">
+    <h2 style="margin:0 0 16px;font-size:15px;font-weight:800;letter-spacing:-.3px">일별 순이익 캘린더</h2>
+    <div class="period-calendar-wrapper">
+        <div class="period-calendar">
+            <div class="period-cal-header">
+                <div class="period-cal-hdr">월</div>
+                <div class="period-cal-hdr">화</div>
+                <div class="period-cal-hdr">수</div>
+                <div class="period-cal-hdr">목</div>
+                <div class="period-cal-hdr">금</div>
+                <div class="period-cal-hdr">토</div>
+                <div class="period-cal-hdr">일</div>
+            </div>
+            {% for week in weeks %}
+            <div class="period-cal-row">
+                {% for day in week %}
+                <div class="period-cal-cell {% if day.is_today %}period-cal-today{% endif %} {% if not day.in_range %}period-cal-out{% endif %}"
+                     {% if day.in_range and day.profit is not none %}onclick="location.href='/?date={{ day.date_str }}'" style="cursor:pointer"{% endif %}>
+                    <div class="period-cal-date">{{ day.date.strftime('%m/%d') }}</div>
+                    {% if day.in_range and day.profit is not none %}
+                    <div class="period-cal-profit {% if day.profit >= 0 %}text-ok{% else %}text-danger{% endif %}">
+                        {% if day.profit >= 0 %}+{% endif %}{{ day.profit|round|fmt }}
+                    </div>
+                    <div class="period-cal-units">{{ day.units|fmt }}개</div>
+                    {% elif day.in_range %}
+                    <div class="period-cal-profit" style="color:var(--text-muted)">—</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+{# ── 순이익 랭킹 Best / Worst ── #}
+<div class="period-ranking-grid">
+    {# Best 10 #}
+    <section class="ds-card" style="padding:20px 24px">
+        <h2 style="margin:0 0 12px;font-size:15px;font-weight:800;letter-spacing:-.3px">
+            <span style="color:var(--st-ok)">Best</span> 10
+        </h2>
+        {% if best %}
+        <div class="overflow-x-auto">
+            <table class="ds-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>상품명</th>
+                        <th class="center">판매량</th>
+                        <th class="center">광고비</th>
+                        <th class="center">누적 순이익</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in best %}
+                    <tr class="clickable" onclick="location.href='/product/{{ r.vendor_item_id }}'">
+                        <td style="font-weight:{% if loop.index <= 3 %}700{% else %}400{% endif %};font-variant-numeric:tabular-nums;{% if loop.index > 3 %}color:var(--text-muted){% endif %}">{{ loop.index }}</td>
+                        <td style="max-width:200px;{% if loop.index <= 3 %}font-weight:700{% endif %}">
+                            <span style="display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">{{ r.display_name }}</span>
+                        </td>
+                        <td class="center">{{ r.total_units|fmt }}</td>
+                        <td class="center" style="color:var(--text-secondary)">{{ r.total_ad_spend|fmt }}</td>
+                        <td class="center" style="font-weight:700;color:var(--st-ok)">{{ r.net_profit|round|fmt }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">이익 상품 없음</div>
+        {% endif %}
+    </section>
+
+    {# Worst 10 #}
+    <section class="ds-card" style="padding:20px 24px">
+        <h2 style="margin:0 0 12px;font-size:15px;font-weight:800;letter-spacing:-.3px">
+            <span style="color:var(--st-danger)">Worst</span> 10
+        </h2>
+        {% if worst %}
+        <div class="overflow-x-auto">
+            <table class="ds-table">
+                <thead>
+                    <tr>
+                        <th style="width:36px">#</th>
+                        <th>상품명</th>
+                        <th class="center">판매량</th>
+                        <th class="center">광고비</th>
+                        <th class="center">누적 순이익</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in worst %}
+                    <tr class="clickable" onclick="location.href='/product/{{ r.vendor_item_id }}'">
+                        <td style="font-weight:{% if loop.index <= 3 %}700{% else %}400{% endif %};font-variant-numeric:tabular-nums;{% if loop.index > 3 %}color:var(--text-muted){% endif %}">{{ loop.index }}</td>
+                        <td style="max-width:200px;{% if loop.index <= 3 %}font-weight:700{% endif %}">
+                            <span style="display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden">{{ r.display_name }}</span>
+                        </td>
+                        <td class="center">{{ r.total_units|fmt }}</td>
+                        <td class="center" style="color:var(--text-secondary)">{{ r.total_ad_spend|fmt }}</td>
+                        <td class="center" style="font-weight:700;color:var(--st-danger)">{{ r.net_profit|round|fmt }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div style="color:var(--text-muted);font-size:13px;padding:20px 0;text-align:center">손실 상품 없음</div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

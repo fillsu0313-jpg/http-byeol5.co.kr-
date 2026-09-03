@@ -8,7 +8,8 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pathlib import Path
-from datetime import date
+from datetime import date, timedelta, datetime
+import calendar
 from typing import Optional
 
 from src import db
@@ -91,6 +92,80 @@ async def dashboard(request: Request, date: Optional[str] = None):
         "rows": rows,
         "totals": totals if has_data else None,
         "collection": collection,
+    })
+
+
+@app.get("/period", response_class=HTMLResponse)
+async def period_analysis(request: Request, period: Optional[str] = None,
+                          from_date: Optional[str] = None, to_date: Optional[str] = None):
+    today = date.today()
+
+    if period == "week":
+        # 이번주 (월요일~일요일)
+        start = today - timedelta(days=today.weekday())
+        end = start + timedelta(days=6)
+    elif period == "last_month":
+        first_this = today.replace(day=1)
+        last_month_end = first_this - timedelta(days=1)
+        start = last_month_end.replace(day=1)
+        end = last_month_end
+    elif period == "custom" and from_date and to_date:
+        start = date.fromisoformat(from_date)
+        end = date.fromisoformat(to_date)
+    else:
+        # 기본: 이번 달
+        period = "month"
+        start = today.replace(day=1)
+        end = today.replace(day=calendar.monthrange(today.year, today.month)[1])
+
+    from_str = start.isoformat()
+    to_str = end.isoformat()
+
+    summary = db.get_period_summary(from_str, to_str)
+    ranking = db.get_period_ranking(from_str, to_str)
+    daily_totals = db.get_daily_totals(from_str, to_str)
+
+    # 캘린더 그리드 생성 (start~end 범위의 모든 날짜)
+    daily_map = {d["stat_date"]: d for d in daily_totals}
+
+    # 캘린더 주 단위 배열 구성
+    cal_start = start - timedelta(days=start.weekday())  # 월요일로 정렬
+    cal_end = end + timedelta(days=(6 - end.weekday()))   # 일요일로 정렬
+    weeks = []
+    current = cal_start
+    while current <= cal_end:
+        week = []
+        for _ in range(7):
+            in_range = start <= current <= end
+            day_data = daily_map.get(current.isoformat())
+            week.append({
+                "date": current,
+                "date_str": current.isoformat(),
+                "in_range": in_range,
+                "is_today": current == today,
+                "profit": day_data["total_profit"] if day_data else None,
+                "units": day_data["total_units"] if day_data else None,
+                "count": day_data["product_count"] if day_data else None,
+            })
+            current += timedelta(days=1)
+        weeks.append(week)
+
+    # Best / Worst 분리
+    best = [r for r in ranking if r.get("net_profit") is not None and r["net_profit"] > 0][:10]
+    worst_all = [r for r in ranking if r.get("net_profit") is not None and r["net_profit"] < 0]
+    worst = list(reversed(worst_all))[:10]
+
+    return templates.TemplateResponse(request, "period.html", {
+        "period": period,
+        "from_date": from_str,
+        "to_date": to_str,
+        "start_display": start.strftime("%Y.%m.%d"),
+        "end_display": end.strftime("%Y.%m.%d"),
+        "summary": summary,
+        "weeks": weeks,
+        "best": best,
+        "worst": worst,
+        "today": today.isoformat(),
     })
 
 

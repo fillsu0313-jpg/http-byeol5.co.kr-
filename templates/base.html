@@ -15,7 +15,7 @@
         }
     }
     </script>
-    <link rel="stylesheet" href="/static/design-system.css?v=20260903f">
+    <link rel="stylesheet" href="/static/design-system.css?v=20260904a">
     {% block head %}{% endblock %}
 </head>
 <body>
@@ -46,6 +46,9 @@
                     <div class="ds-sidebar-group-label">분석</div>
                     <a href="/" class="ds-sidebar-link {% block nav_dashboard %}{% endblock %}">
                         <span class="ds-sidebar-icon">▦</span><span>일별 대시보드</span>
+                    </a>
+                    <a href="/period" class="ds-sidebar-link {% block nav_period %}{% endblock %}">
+                        <span class="ds-sidebar-icon">◫</span><span>기간별 분석</span>
                     </a>
                 </div>
                 <div class="ds-sidebar-group">

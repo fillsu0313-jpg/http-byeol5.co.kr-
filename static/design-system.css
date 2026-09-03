@@ -1202,3 +1202,92 @@ input[type="file"]::file-selector-button:hover {
 /* ── Hover utilities ── */
 .hover\:bg-surface-2:hover { background-color: var(--surface-2) !important; }
 .hover\:text-ink:hover     { color: var(--text-primary) !important; }
+
+/* ═══════════════════════════════════════════════════════════════
+   기간별 분석 — 캘린더 + 랭킹
+   ═══════════════════════════════════════════════════════════════ */
+
+.period-calendar-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.period-calendar {
+  min-width: 560px;
+}
+.period-cal-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.period-cal-hdr {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 4px 0;
+}
+.period-cal-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.period-cal-cell {
+  background: var(--surface-2);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius);
+  padding: 8px 6px;
+  min-height: 72px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.period-cal-cell:hover:not(.period-cal-out) {
+  border-color: var(--border-strong);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.period-cal-today {
+  border: 2px solid var(--accent) !important;
+  background: var(--accent-soft);
+}
+.period-cal-out {
+  opacity: .35;
+}
+.period-cal-date {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.period-cal-profit {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+}
+.period-cal-units {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 랭킹 그리드 */
+.period-ranking-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 1023px) {
+  .period-ranking-grid {
+    grid-template-columns: 1fr;
+  }
+  .period-cal-cell {
+    min-height: 60px;
+    padding: 6px 4px;
+  }
+  .period-cal-profit { font-size: 12px; }
+  .period-cal-units { font-size: 10px; }
+}
