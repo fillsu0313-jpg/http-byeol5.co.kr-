@@ -5,62 +5,68 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 {% endblock %}
 
-{% block content %}
-<div class="mb-4">
-    <a href="/" class="ds-btn ds-btn--ghost ds-btn--sm" style="padding-left:0">&larr; 대시보드</a>
-</div>
+{% block page_title %}{{ product.display_name }}{% endblock %}
+{% block page_subtitle %}vendorItemId {{ product.vendor_item_id }}{% endblock %}
 
+{% block page_actions %}
+<div class="flex items-center gap-2">
+    <a href="/" class="ds-btn ds-btn--ghost ds-btn--sm">← 대시보드</a>
+    {% if coupang_link %}
+    <a href="{{ coupang_link }}" target="_blank" class="ds-btn ds-btn--secondary ds-btn--sm">쿠팡 링크</a>
+    {% endif %}
+    {% if daily %}
+    <a href="/download/product/{{ product.vendor_item_id }}{% if from_date %}?from_date={{ from_date }}&to_date={{ to_date }}{% endif %}"
+       class="ds-btn ds-btn--secondary ds-btn--sm">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 5 5-5M4 21h16"></path></svg>
+        엑셀 다운로드
+    </a>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block content %}
 {# ── 상품 기본 정보 ── #}
-<div class="ds-card ds-card--accent-left mb-5">
-    <div class="ds-card-body">
-        <div class="flex items-start justify-between">
-            <div>
-                <h1 class="text-xl font-bold text-ink mb-2">{{ product.display_name }}</h1>
-                <div class="text-sm text-ink-3 space-y-1">
-                    <div>vendorItemId: <span class="ds-mono text-ink-2">{{ product.vendor_item_id }}</span></div>
+<div class="ds-card ds-card--accent-left">
+    <div style="padding:20px 22px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+            <div style="min-width:0">
+                <h2 style="margin:0;font-size:17px;font-weight:700;line-height:1.4">{{ product.display_name }}</h2>
+                <div style="display:flex;align-items:center;gap:12px;margin-top:8px;font-size:12px;color:var(--text-muted)">
+                    <span>vendorItemId <b style="color:var(--text-secondary);font-weight:600;font-variant-numeric:tabular-nums">{{ product.vendor_item_id }}</b></span>
                     {% if product.coupang_name and product.coupang_name != product.display_name %}
-                    <div>쿠팡 상품명: {{ product.coupang_name }}</div>
+                    <span style="color:var(--border)">·</span>
+                    <span>쿠팡명 <b style="color:var(--text-secondary);font-weight:600">{{ product.coupang_name }}</b></span>
                     {% endif %}
-                    <div>상태: {% if product.is_active %}<span class="ds-badge ds-badge--ok">활성</span>{% else %}<span class="ds-badge ds-badge--neutral">비활성</span>{% endif %}</div>
+                    <span style="color:var(--border)">·</span>
+                    <span>{% if product.is_active %}<span class="ds-badge ds-badge--ok">활성</span>{% else %}<span class="ds-badge ds-badge--neutral">비활성</span>{% endif %}</span>
                 </div>
-            </div>
-            <div class="flex gap-2 flex-shrink-0 ml-4">
-                {% if coupang_link %}
-                <a href="{{ coupang_link }}" target="_blank" class="ds-btn ds-btn--danger ds-btn--sm">쿠팡 링크</a>
-                {% endif %}
-                {% if daily %}
-                <a href="/download/product/{{ product.vendor_item_id }}{% if from_date %}?from_date={{ from_date }}&to_date={{ to_date }}{% endif %}"
-                   class="ds-btn ds-btn--ok ds-btn--sm">엑셀 다운로드</a>
-                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
 {# ── 기간 선택 ── #}
-<div class="ds-card mb-5">
-    <div class="ds-card-body">
-        <div class="flex flex-wrap items-center gap-2">
-            <span class="text-sm font-semibold text-ink-2 mr-1">기간:</span>
-            {% for p, label in [("7d","7일"), ("30d","30일"), ("90d","90일"), ("all","전체")] %}
-            <a href="/product/{{ product.vendor_item_id }}?period={{ p }}"
-               class="ds-pill {% if period == p %}active{% endif %}">{{ label }}</a>
-            {% endfor %}
-            <span class="text-line mx-1">|</span>
-            <form class="flex items-center gap-1 text-sm" method="get"
-                  action="/product/{{ product.vendor_item_id }}">
-                <input type="date" name="from_date" value="{{ from_date }}" class="ds-input ds-input--sm w-36">
-                <span class="text-ink-3">~</span>
-                <input type="date" name="to_date" value="{{ to_date }}" class="ds-input ds-input--sm w-36">
-                <button type="submit" class="ds-btn ds-btn--secondary ds-btn--sm">조회</button>
-            </form>
-        </div>
+<div class="ds-card">
+    <div style="padding:14px 20px;display:flex;flex-wrap:wrap;align-items:center;gap:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--text-secondary)">기간:</span>
+        {% for p, label in [("7d","7일"), ("30d","30일"), ("90d","90일"), ("all","전체")] %}
+        <a href="/product/{{ product.vendor_item_id }}?period={{ p }}"
+           class="ds-pill {% if period == p %}active{% endif %}">{{ label }}</a>
+        {% endfor %}
+        <span style="color:var(--border);margin:0 4px">|</span>
+        <form class="flex items-center gap-1 text-sm" method="get"
+              action="/product/{{ product.vendor_item_id }}">
+            <input type="date" name="from_date" value="{{ from_date }}" class="ds-input ds-input--sm" style="width:140px">
+            <span style="color:var(--text-muted)">~</span>
+            <input type="date" name="to_date" value="{{ to_date }}" class="ds-input ds-input--sm" style="width:140px">
+            <button type="submit" class="ds-btn ds-btn--secondary ds-btn--sm">조회</button>
+        </form>
     </div>
 </div>
 
 {% if daily %}
-{# ── 요약 카드 ── #}
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 ds-section-gap">
+{# ── 요약 KPI ── #}
+<div class="ds-kpi-grid">
     {% set ns = namespace(total_profit=0, total_units=0, total_ad_spend=0, total_ad_units=0, total_organic=0, days=0) %}
     {% for d in daily %}
         {% if d.net_profit is not none %}{% set ns.total_profit = ns.total_profit + d.net_profit %}{% endif %}
@@ -70,46 +76,95 @@
         {% if d.organic_units is not none %}{% set ns.total_organic = ns.total_organic + d.organic_units %}{% endif %}
         {% set ns.days = ns.days + 1 %}
     {% endfor %}
-    <div class="ds-kpi">
-        <div class="ds-kpi-label">기간 순이익</div>
-        <div class="ds-kpi-value {% if ns.total_profit < 0 %}num-negative{% else %}num-primary{% endif %}">{{ ns.total_profit|fmt }}원</div>
+
+    <div class="ds-kpi-hero">
+        <div class="ds-kpi-hero-label">
+            <span class="ds-kpi-hero-label-text">기간 순이익</span>
+            <span class="ds-kpi-hero-label-badge">{{ ns.days }}일</span>
+        </div>
+        <div class="ds-kpi-hero-value">
+            <span class="ds-kpi-hero-number {% if ns.total_profit < 0 %}text-danger{% endif %}">{{ ns.total_profit|fmt }}</span>
+            <span class="ds-kpi-hero-unit">원</span>
+        </div>
+        {% if ns.days > 0 %}
+        <div class="ds-kpi-hero-delta">
+            <span class="ds-kpi-hero-delta-abs">일평균 {{ (ns.total_profit / ns.days)|round|fmt }}원</span>
+        </div>
+        {% endif %}
     </div>
+
     <div class="ds-kpi">
         <div class="ds-kpi-label">총 판매량</div>
-        <div class="ds-kpi-value">{{ ns.total_units|fmt }}개</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number">{{ ns.total_units|fmt }}</span>
+            <span class="ds-kpi-unit">개</span>
+        </div>
     </div>
     <div class="ds-kpi">
         <div class="ds-kpi-label">총 광고비 (VAT포함)</div>
-        <div class="ds-kpi-value">{{ (ns.total_ad_spend * 1.1)|fmt }}원</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number">{{ (ns.total_ad_spend * 1.1)|fmt }}</span>
+            <span class="ds-kpi-unit">원</span>
+        </div>
     </div>
     <div class="ds-kpi">
         <div class="ds-kpi-label">자연판매 비중</div>
-        <div class="ds-kpi-value">{% if ns.total_units > 0 %}{{ (ns.total_organic / ns.total_units * 100)|round(1) }}%{% else %}-{% endif %}</div>
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number">{% if ns.total_units > 0 %}{{ (ns.total_organic / ns.total_units * 100)|round(1) }}{% else %}—{% endif %}</span>
+            <span class="ds-kpi-unit">%</span>
+        </div>
     </div>
     <div class="ds-kpi">
         <div class="ds-kpi-label">일평균 순이익</div>
-        <div class="ds-kpi-value {% if ns.total_profit < 0 %}num-negative{% else %}num-primary{% endif %}">
-            {% if ns.days > 0 %}{{ (ns.total_profit / ns.days)|round|fmt }}원{% else %}-{% endif %}
+        <div class="ds-kpi-value">
+            <span class="ds-kpi-number {% if ns.total_profit < 0 %}text-danger{% endif %}">{% if ns.days > 0 %}{{ (ns.total_profit / ns.days)|round|fmt }}{% else %}—{% endif %}</span>
+            <span class="ds-kpi-unit">원</span>
         </div>
     </div>
 </div>
 
 {# ── 차트 ── #}
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-    <div class="ds-card"><div class="ds-card-header"><h2>순이익 · 광고비 추이</h2></div><div class="p-4"><div style="position:relative;height:280px"><canvas id="profitChart"></canvas></div></div></div>
-    <div class="ds-card"><div class="ds-card-header"><h2>판매량 (광고 / 자연)</h2></div><div class="p-4"><div style="position:relative;height:280px"><canvas id="salesChart"></canvas></div></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px">
+    <div class="ds-card">
+        <div class="ds-card-header">
+            <h2>순이익 · 광고비 추이</h2>
+            <div class="ds-card-header-right" style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text-secondary)">
+                <span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:#3E5A80;display:inline-block"></i>순이익</span>
+                <span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:#F5843C;display:inline-block"></i>광고비</span>
+            </div>
+        </div>
+        <div class="p-4"><div style="position:relative;height:280px"><canvas id="profitChart"></canvas></div></div>
+    </div>
+    <div class="ds-card">
+        <div class="ds-card-header">
+            <h2>판매량 (광고 / 자연)</h2>
+            <div class="ds-card-header-right" style="display:flex;align-items:center;gap:14px;font-size:12px;color:var(--text-secondary)">
+                <span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:#F5843C;display:inline-block"></i>광고</span>
+                <span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:2px;background:#1E9E54;display:inline-block"></i>자연</span>
+            </div>
+        </div>
+        <div class="p-4"><div style="position:relative;height:280px"><canvas id="salesChart"></canvas></div></div>
+    </div>
 </div>
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
-    <div class="ds-card"><div class="ds-card-header"><h2>자연판매 비중 추이</h2></div><div class="p-4"><div style="position:relative;height:250px"><canvas id="organicRatioChart"></canvas></div></div></div>
-    <div class="ds-card"><div class="ds-card-header"><h2>전환율 추이</h2></div><div class="p-4"><div style="position:relative;height:250px"><canvas id="conversionChart"></canvas></div></div></div>
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:14px">
+    <div class="ds-card">
+        <div class="ds-card-header"><h2>자연판매 비중 추이</h2></div>
+        <div class="p-4"><div style="position:relative;height:250px"><canvas id="organicRatioChart"></canvas></div></div>
+    </div>
+    <div class="ds-card">
+        <div class="ds-card-header"><h2>전환율 추이</h2></div>
+        <div class="p-4"><div style="position:relative;height:250px"><canvas id="conversionChart"></canvas></div></div>
+    </div>
 </div>
 {% endif %}
 
 {# ── 변경 메모 ── #}
-<div class="ds-card mb-5">
+<div class="ds-card">
     <div class="ds-card-header">
         <h2>변경 메모</h2>
-        <button onclick="document.getElementById('noteForm').classList.toggle('hidden')" class="ds-btn ds-btn--ghost ds-btn--sm">+ 메모 추가</button>
+        <div class="ds-card-header-right">
+            <button onclick="document.getElementById('noteForm').classList.toggle('hidden')" class="ds-btn ds-btn--ghost ds-btn--sm">+ 메모 추가</button>
+        </div>
     </div>
     <div id="noteForm" class="hidden border-b border-line p-5 bg-surface-2">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
@@ -125,40 +180,48 @@
     <div id="noteList">
         {% if notes %}
         {% for n in notes %}
-        <div class="px-5 py-2.5 border-b border-line/50 text-sm flex items-center justify-between hover:bg-surface-2">
+        <div style="padding:12px 20px;border-bottom:1px solid #F2F2EF;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:default" onmouseover="this.style.background='#FAFAF8'" onmouseout="this.style.background='transparent'">
             <div>
                 {% if n.change_type == '가격' %}<span class="ds-badge ds-badge--info">{{ n.change_type }}</span>
                 {% elif n.change_type == '광고' %}<span class="ds-badge ds-badge--caution">{{ n.change_type }}</span>
                 {% else %}<span class="ds-badge ds-badge--neutral">{{ n.change_type }}</span>{% endif %}
-                <span class="text-ink-3 ml-2">{{ n.note_date }}</span>
-                <span class="text-ink ml-2">{{ n.note }}</span>
+                <span style="color:var(--text-muted);margin-left:8px;font-variant-numeric:tabular-nums">{{ n.note_date }}</span>
+                <span style="margin-left:8px">{{ n.note }}</span>
             </div>
-            <button onclick="deleteNote({{ n.id }})" class="ds-btn ds-btn--ghost ds-btn--sm text-ink-3 text-xs">삭제</button>
+            <button onclick="deleteNote({{ n.id }})" class="ds-btn ds-btn--ghost ds-btn--sm" style="color:var(--text-muted);font-size:12px">삭제</button>
         </div>
         {% endfor %}
         {% else %}
-        <div class="ds-empty" style="padding:24px" id="noNotes"><div class="ds-empty-desc">메모가 없습니다</div></div>
+        <div class="ds-empty" style="padding:24px"><div class="ds-empty-desc">메모가 없습니다</div></div>
         {% endif %}
     </div>
 </div>
 
 {# ── 원가 이력 ── #}
-<div class="ds-card mb-5">
+<div class="ds-card">
     <div class="ds-card-header">
         <h2>원가 이력</h2>
-        <a href="/costs?vid={{ product.vendor_item_id }}" class="ds-btn ds-btn--ghost ds-btn--sm">관리 &rarr;</a>
+        <span class="ds-card-meta">적용 시작일 기준 · 최신순</span>
+        <div class="ds-card-header-right">
+            <a href="/costs?vid={{ product.vendor_item_id }}" class="ds-btn ds-btn--ghost ds-btn--sm">관리 →</a>
+        </div>
     </div>
     {% if costs %}
     <div class="overflow-x-auto">
         <table class="ds-table">
-            <thead><tr><th>적용시작일</th><th class="right">판매가</th><th class="right">매입원가</th><th class="right">수수료</th><th class="right">입출고</th><th class="right">개당순마진</th></tr></thead>
+            <thead><tr>
+                <th>적용시작일</th><th class="right">판매가</th><th class="right">매입원가</th>
+                <th class="right">수수료</th><th class="right">입출고</th><th class="right">개당순마진</th>
+            </tr></thead>
             <tbody>
                 {% for c in costs %}
                 <tr>
-                    <td class="text-ink">{{ c.effective_from }}</td>
-                    <td class="right">{{ c.sale_price|fmt }}</td><td class="right">{{ c.purchase_cost|fmt }}</td>
-                    <td class="right">{{ c.commission_fee|fmt }}</td><td class="right">{{ c.fulfillment_fee|fmt }}</td>
-                    <td class="right font-semibold {% if c.unit_margin is not none and c.unit_margin < 0 %}num-negative{% else %}num-primary{% endif %}">{{ c.unit_margin|fmt }}</td>
+                    <td style="font-weight:600;font-variant-numeric:tabular-nums">{{ c.effective_from }}</td>
+                    <td class="right" style="font-variant-numeric:tabular-nums">{{ c.sale_price|fmt }}</td>
+                    <td class="right" style="font-variant-numeric:tabular-nums">{{ c.purchase_cost|fmt }}</td>
+                    <td class="right" style="font-variant-numeric:tabular-nums">{{ c.commission_fee|fmt }}</td>
+                    <td class="right" style="font-variant-numeric:tabular-nums">{{ c.fulfillment_fee|fmt }}</td>
+                    <td class="right" style="font-weight:700;font-variant-numeric:tabular-nums;{% if c.unit_margin is not none and c.unit_margin < 0 %}color:var(--st-danger){% endif %}">{{ c.unit_margin|fmt }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -175,16 +238,16 @@
     {% if daily %}
     <div class="overflow-x-auto">
         <table class="ds-table">
-            <thead><tr><th>날짜</th><th class="right">판매량</th><th class="right">광고판매</th><th class="right">자연판매</th><th class="right">조회수</th><th class="right">전환율</th><th class="right">광고비</th><th class="right">개당순마진</th><th class="right">일순이익</th></tr></thead>
+            <thead><tr><th>날짜</th><th class="center">판매량</th><th class="center">광고판매</th><th class="center">자연판매</th><th class="center">조회수</th><th class="center">전환율</th><th class="center">광고비</th><th class="center">개당순마진</th><th class="center">일순이익</th></tr></thead>
             <tbody>
                 {% for d in daily %}
                 <tr>
-                    <td class="text-ink">{{ d.stat_date }}</td>
-                    <td class="right">{{ d.units_sold|fmt }}</td><td class="right">{{ d.ad_units|fmt }}</td>
-                    <td class="right">{{ d.organic_units|fmt }}</td><td class="right">{{ d.total_views|fmt }}</td>
-                    <td class="right">{% if d.conversion_rate is not none %}{{ d.conversion_rate }}%{% else %}-{% endif %}</td>
-                    <td class="right">{{ d.ad_spend|fmt }}</td><td class="right">{{ d.unit_margin|fmt }}</td>
-                    <td class="right font-semibold {% if d.net_profit is not none and d.net_profit < 0 %}num-negative{% else %}num-primary{% endif %}">{{ d.net_profit|fmt }}</td>
+                    <td style="font-variant-numeric:tabular-nums">{{ d.stat_date }}</td>
+                    <td class="center">{{ d.units_sold|fmt }}</td><td class="center">{{ d.ad_units|fmt }}</td>
+                    <td class="center">{{ d.organic_units|fmt }}</td><td class="center">{{ d.total_views|fmt }}</td>
+                    <td class="center">{% if d.conversion_rate is not none %}{{ d.conversion_rate }}%{% else %}—{% endif %}</td>
+                    <td class="center">{{ d.ad_spend|fmt }}</td><td class="center">{{ d.unit_margin|fmt }}</td>
+                    <td class="center" style="font-weight:700;{% if d.net_profit is not none and d.net_profit < 0 %}color:var(--st-danger){% endif %}">{{ d.net_profit|fmt }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -203,40 +266,39 @@ const dailyData = {{ daily|tojson }}.reverse();
 const labels = dailyData.map(d => d.stat_date.slice(5));
 const fullLabels = dailyData.map(d => d.stat_date);
 const fontCfg = { family:"'Pretendard',sans-serif" };
-const gridColor = 'var(--chart-grid)';
 
 const commonOpts = {
     responsive:true, maintainAspectRatio:false,
     interaction:{mode:'index',intersect:false},
     plugins:{
-        legend:{position:'bottom',labels:{boxWidth:12,font:{size:12,...fontCfg}}},
+        legend:{display:false},
         tooltip:{titleFont:fontCfg,bodyFont:fontCfg,callbacks:{
             title:i=>fullLabels[i[0].dataIndex],
-            label:ctx=>{const v=ctx.parsed.y;return ctx.dataset.label+': '+(v==null?'-':v.toLocaleString('ko-KR'));}
+            label:ctx=>{const v=ctx.parsed.y;return ctx.dataset.label+': '+(v==null?'—':v.toLocaleString('ko-KR'));}
         }}
     },
-    scales:{x:{ticks:{font:{size:11,...fontCfg},maxRotation:45},grid:{color:'rgba(220,220,215,0.5)'}}}
+    scales:{x:{ticks:{font:{size:12,...fontCfg},maxRotation:45},grid:{display:false}}}
 };
 
 new Chart(document.getElementById('profitChart'),{type:'bar',data:{labels,datasets:[
-    {label:'일순이익',data:dailyData.map(d=>d.net_profit),backgroundColor:dailyData.map(d=>d.net_profit!=null&&d.net_profit<0?'rgba(224,58,30,0.7)':'rgba(28,91,255,0.7)'),borderRadius:4,order:2},
-    {label:'광고비(VAT포함)',data:dailyData.map(d=>d.ad_spend!=null?Math.round(d.ad_spend*1.1):null),type:'line',borderColor:'rgba(245,132,60,0.9)',backgroundColor:'rgba(245,132,60,0.1)',borderWidth:2,pointRadius:2,fill:false,order:1}
-]},options:{...commonOpts,scales:{...commonOpts.scales,y:{ticks:{font:{size:11,...fontCfg},callback:v=>v.toLocaleString('ko-KR')},grid:{color:'rgba(220,220,215,0.5)'}}}}});
+    {label:'일순이익',data:dailyData.map(d=>d.net_profit),backgroundColor:'rgba(62,90,128,0.85)',borderRadius:2,order:2},
+    {label:'광고비(VAT포함)',data:dailyData.map(d=>d.ad_spend!=null?Math.round(d.ad_spend*1.1):null),type:'line',borderColor:'#F5843C',backgroundColor:'rgba(245,132,60,0.08)',borderWidth:2,pointRadius:2,fill:false,order:1}
+]},options:{...commonOpts,scales:{...commonOpts.scales,y:{ticks:{font:{size:12,...fontCfg},callback:v=>v.toLocaleString('ko-KR')},grid:{color:'rgba(35,31,32,.10)'}}}}});
 
 new Chart(document.getElementById('salesChart'),{type:'bar',data:{labels,datasets:[
     {label:'광고판매',data:dailyData.map(d=>d.ad_units),backgroundColor:'rgba(245,132,60,0.7)',stack:'s'},
-    {label:'자연판매',data:dailyData.map(d=>d.organic_units),backgroundColor:'rgba(30,158,84,0.7)',stack:'s',borderRadius:{topLeft:4,topRight:4}}
-]},options:{...commonOpts,scales:{...commonOpts.scales,x:{...commonOpts.scales.x,stacked:true},y:{stacked:true,ticks:{font:{size:11,...fontCfg}},grid:{color:'rgba(220,220,215,0.5)'}}}}});
+    {label:'자연판매',data:dailyData.map(d=>d.organic_units),backgroundColor:'rgba(30,158,84,0.7)',stack:'s',borderRadius:{topLeft:2,topRight:2}}
+]},options:{...commonOpts,scales:{...commonOpts.scales,x:{...commonOpts.scales.x,stacked:true},y:{stacked:true,ticks:{font:{size:12,...fontCfg}},grid:{color:'rgba(35,31,32,.10)'}}}}});
 
 const oRatio=dailyData.map(d=>d.units_sold&&d.units_sold>0&&d.organic_units!=null?Math.round(d.organic_units/d.units_sold*1000)/10:null);
-new Chart(document.getElementById('organicRatioChart'),{type:'line',data:{labels,datasets:[{label:'자연판매 비중 (%)',data:oRatio,borderColor:'rgba(30,158,84,0.9)',backgroundColor:'rgba(30,158,84,0.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'rgba(30,158,84,1)',fill:true,tension:0.3}]},
-options:{...commonOpts,scales:{...commonOpts.scales,y:{min:0,max:100,ticks:{font:{size:11,...fontCfg},callback:v=>v+'%'},grid:{color:'rgba(220,220,215,0.5)'}}},
-plugins:{...commonOpts.plugins,tooltip:{callbacks:{title:i=>fullLabels[i[0].dataIndex],label:ctx=>{const v=ctx.parsed.y;if(v==null)return'자연판매 비중: -';const d=dailyData[ctx.dataIndex];return`자연판매 비중: ${v}% (${d.organic_units||0}/${d.units_sold||0})`;}}}}
+new Chart(document.getElementById('organicRatioChart'),{type:'line',data:{labels,datasets:[{label:'자연판매 비중 (%)',data:oRatio,borderColor:'#6AC8C7',backgroundColor:'rgba(106,200,199,0.08)',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#6AC8C7',fill:true,tension:0.3}]},
+options:{...commonOpts,scales:{...commonOpts.scales,y:{min:0,max:100,ticks:{font:{size:12,...fontCfg},callback:v=>v+'%'},grid:{color:'rgba(35,31,32,.10)'}}},
+plugins:{...commonOpts.plugins,tooltip:{callbacks:{title:i=>fullLabels[i[0].dataIndex],label:ctx=>{const v=ctx.parsed.y;if(v==null)return'자연판매 비중: —';const d=dailyData[ctx.dataIndex];return`자연판매 비중: ${v}% (${d.organic_units||0}/${d.units_sold||0})`;}}}}
 }});
 
-new Chart(document.getElementById('conversionChart'),{type:'line',data:{labels,datasets:[{label:'전환율 (%)',data:dailyData.map(d=>d.conversion_rate),borderColor:'rgba(106,200,199,0.9)',backgroundColor:'rgba(106,200,199,0.08)',borderWidth:2,pointRadius:3,pointBackgroundColor:'rgba(106,200,199,1)',fill:true,tension:0.3}]},
-options:{...commonOpts,scales:{...commonOpts.scales,y:{min:0,ticks:{font:{size:11,...fontCfg},callback:v=>v+'%'},grid:{color:'rgba(220,220,215,0.5)'}}},
-plugins:{...commonOpts.plugins,tooltip:{callbacks:{title:i=>fullLabels[i[0].dataIndex],label:ctx=>{const v=ctx.parsed.y;return v==null?'전환율: -':`전환율: ${v}%`;}}}}
+new Chart(document.getElementById('conversionChart'),{type:'line',data:{labels,datasets:[{label:'전환율 (%)',data:dailyData.map(d=>d.conversion_rate),borderColor:'#9E9F9C',backgroundColor:'rgba(158,159,156,0.08)',borderWidth:2.5,pointRadius:3,pointBackgroundColor:'#9E9F9C',fill:true,tension:0.3}]},
+options:{...commonOpts,scales:{...commonOpts.scales,y:{min:0,ticks:{font:{size:12,...fontCfg},callback:v=>v+'%'},grid:{color:'rgba(35,31,32,.10)'}}},
+plugins:{...commonOpts.plugins,tooltip:{callbacks:{title:i=>fullLabels[i[0].dataIndex],label:ctx=>{const v=ctx.parsed.y;return v==null?'전환율: —':`전환율: ${v}%`;}}}}
 }});
 </script>
 {% endif %}

@@ -1,12 +1,13 @@
 {% extends "base.html" %}
 {% block title %}원가 관리 — 쿠팡 순이익{% endblock %}
 {% block nav_costs %}active{% endblock %}
+{% block page_title %}원가 관리{% endblock %}
+{% block page_subtitle %}상품별 원가 이력{% endblock %}
+{% block page_actions %}
+<a href="/costs/bulk" class="ds-btn ds-btn--secondary ds-btn--sm">일괄 입력</a>
+{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold text-ink">원가 관리</h1>
-    <a href="/costs/bulk" class="ds-btn ds-btn--ok ds-btn--sm">일괄 입력</a>
-</div>
 
 <div class="flex flex-col lg:flex-row gap-5">
     {# ── 상품 목록 ── #}

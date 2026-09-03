@@ -1,10 +1,11 @@
 {% extends "base.html" %}
 {% block title %}데이터 업로드{% endblock %}
 {% block nav_upload %}active{% endblock %}
+{% block page_title %}데이터 업로드{% endblock %}
+{% block page_subtitle %}판매 · 광고 리포트{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <h1 class="text-xl font-bold text-ink mb-5">데이터 업로드</h1>
+<div class="max-w-2xl">
 
     <div class="ds-tabs mb-5">
         <button id="tabAds" onclick="switchTab('ads')" class="ds-tab">광고 데이터</button>

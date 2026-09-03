@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% block title %}원가 일괄 입력 — 쿠팡 순이익{% endblock %}
 {% block nav_costs %}active{% endblock %}
+{% block page_title %}원가 일괄 입력{% endblock %}
+{% block page_actions %}
+<a href="/costs" class="ds-btn ds-btn--ghost ds-btn--sm">← 원가 관리</a>
+{% endblock %}
 
 {% block content %}
-<div class="flex items-center justify-between mb-5">
-    <h1 class="text-xl font-bold text-ink">원가 일괄 입력</h1>
-    <a href="/costs" class="ds-btn ds-btn--ghost ds-btn--sm">← 원가 관리</a>
-</div>
 
 {# ── 공통값 설정 바 ── #}
 <div class="ds-card mb-4">
