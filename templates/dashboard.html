@@ -3,8 +3,8 @@
 {% block nav_dashboard %}active{% endblock %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-5 gap-3">
-    <h1 class="text-xl font-bold text-ink">일별 대시보드</h1>
+<div class="ds-page-header ds-section-gap">
+    <h1 class="ds-h1">일별 대시보드</h1>
     <div class="flex items-center gap-2">
         <label for="date-picker" class="text-sm text-ink-2">날짜:</label>
         {% if dates %}
@@ -57,7 +57,7 @@
 
 {# ── 상단 요약 카드 ── #}
 {% if totals %}
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 ds-section-gap">
     <div class="ds-kpi">
         <div class="ds-kpi-label">총 판매량</div>
         <div class="ds-kpi-value">{{ totals.units_sold|fmt }}개</div>
@@ -90,14 +90,13 @@
 </div>
 {% endif %}
 
-{# ── 검색 ── #}
-<div class="mb-3">
-    <input type="text" id="searchInput" placeholder="상품명 검색..."
-           class="ds-input w-full sm:w-64" oninput="filterRows()">
-</div>
-
 {# ── PC 테이블 (≥1024px) ── #}
 <div class="hidden lg:block ds-card overflow-x-auto">
+    <div class="ds-card-header">
+        <h2>상품별 실적</h2>
+        <input type="text" id="searchInput" placeholder="상품명 검색..."
+               class="ds-input ds-input--sm" style="width:220px" oninput="filterRows()">
+    </div>
     <table class="ds-table" id="dashboard-table">
         <thead>
             <tr>
@@ -184,8 +183,12 @@
 
 {# ── 모바일 카드 (<1024px) ── #}
 <div class="lg:hidden space-y-2">
+    <div class="mb-3">
+        <input type="text" id="searchInputMobile" placeholder="상품명 검색..."
+               class="ds-input w-full" oninput="filterRows()">
+    </div>
     {% if totals %}
-    <div class="bg-accent-soft border border-accent rounded-lg p-3 mb-4">
+    <div class="bg-accent-soft border border-accent rounded-lg p-3 mb-4" style="border-left:4px solid var(--accent)">
         <div class="flex justify-between items-center">
             <span class="text-sm font-semibold text-accent-ink">전체 합계</span>
             <span class="text-lg font-bold {% if totals.net_profit < 0 %}num-negative{% else %}num-primary{% endif %}">
@@ -197,7 +200,7 @@
     {% endif %}
 
     {% for r in rows %}
-    <div class="ds-mobile-card mobile-card" data-name="{{ r.display_name }}">
+    <div class="ds-mobile-card mobile-card {% if r.net_profit is not none and r.net_profit < 0 %}ds-mobile-card--negative{% elif r.net_profit is not none and r.net_profit > 0 %}ds-mobile-card--positive{% else %}ds-mobile-card--neutral{% endif %}" data-name="{{ r.display_name }}">
         <div class="p-3 flex items-center justify-between cursor-pointer" onclick="toggleCard(this)">
             <div class="flex-1 min-w-0">
                 <a href="/product/{{ r.vendor_item_id }}" class="font-semibold text-sm text-ink block truncate"
@@ -243,7 +246,9 @@
 {% block scripts %}
 <script>
 function filterRows() {
-    const q = document.getElementById('searchInput').value.toLowerCase();
+    const pcInput = document.getElementById('searchInput');
+    const mInput = document.getElementById('searchInputMobile');
+    const q = (pcInput && pcInput.value || mInput && mInput.value || '').toLowerCase();
     document.querySelectorAll('.data-row').forEach(row => {
         row.style.display = (row.dataset.name || '').toLowerCase().includes(q) ? '' : 'none';
     });

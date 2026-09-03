@@ -80,9 +80,9 @@
   --radius-lg: 12px;
   --radius-pill: 999px;
 
-  /* Shadow (라이트 — 인지 의존도 높으므로 약간 강화) */
-  --shadow-sm: 0 1px 2px rgba(15, 30, 50, 0.06), 0 1px 3px rgba(15, 30, 50, 0.08);
-  --shadow-md: 0 2px 4px rgba(15, 30, 50, 0.06), 0 4px 12px rgba(15, 30, 50, 0.12);
+  /* Shadow (라이트 — 카드 부각용으로 강화) */
+  --shadow-sm: 0 1px 3px rgba(15, 30, 50, 0.08), 0 2px 6px rgba(15, 30, 50, 0.06);
+  --shadow-md: 0 2px 8px rgba(15, 30, 50, 0.10), 0 6px 18px rgba(15, 30, 50, 0.10);
   --shadow-lg: 0 4px 8px rgba(15, 30, 50, 0.08), 0 12px 32px rgba(15, 30, 50, 0.20);
 
   /* Typography */
@@ -168,6 +168,7 @@ h3, .ds-h3 {
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 4px rgba(15, 30, 50, 0.06);
   position: sticky;
   top: 0;
   z-index: 40;
@@ -176,7 +177,7 @@ h3, .ds-h3 {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 20px;
-  height: 56px;
+  height: 60px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -192,15 +193,15 @@ h3, .ds-h3 {
   letter-spacing: -0.02em;
 }
 .ds-nav-brand .mark {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
   border-radius: var(--radius-sm);
   background: var(--accent);
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: var(--fw-extra);
-  font-size: var(--fs-body);
+  font-size: 15px;
 }
 .ds-nav-links {
   display: flex;
@@ -230,20 +231,25 @@ h3, .ds-h3 {
 .ds-main {
   max-width: 1280px;
   margin: 0 auto;
-  padding: 20px 20px 40px;
+  padding: 28px 20px 40px;
 }
 
 /* ── Card ── */
 .ds-card {
   background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.ds-card:hover {
+  box-shadow: var(--shadow-md);
 }
 .ds-card-header {
   padding: 16px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -259,24 +265,30 @@ h3, .ds-h3 {
 }
 
 /* ── KPI Card (요약 카드) ──
-   상단 accent 라인 */
+   좌측 accent bar */
 .ds-kpi {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--accent);
+  border: 1px solid var(--border-strong);
+  border-left: 4px solid var(--accent);
   border-radius: var(--radius);
-  padding: 16px 18px;
+  padding: 20px 24px;
   box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.ds-kpi:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
 }
 .ds-kpi-label {
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
   color: var(--text-muted);
-  letter-spacing: 0.03em;
-  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 10px;
 }
 .ds-kpi-value {
-  font-size: var(--fs-title);
+  font-size: 26px;
   font-weight: var(--fw-extra);
   color: var(--text-primary);
   letter-spacing: -0.03em;
@@ -285,7 +297,7 @@ h3, .ds-h3 {
 .ds-kpi-sub {
   font-size: var(--fs-caption);
   font-weight: var(--fw-semibold);
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 /* ── Table ── */
@@ -295,35 +307,40 @@ h3, .ds-h3 {
   font-size: var(--fs-label);
 }
 .ds-table thead {
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
+  background: #F2F2EF;
+  border-bottom: 2px solid var(--border);
 }
 .ds-table th {
-  padding: 10px 14px;
+  padding: 12px 16px;
   text-align: left;
-  font-size: var(--fs-caption);
+  font-size: 11px;
   font-weight: var(--fw-bold);
   color: var(--text-muted);
-  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 .ds-table th.right, .ds-table td.right { text-align: right; }
 .ds-table th.center, .ds-table td.center { text-align: center; }
 .ds-table td {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid rgba(220, 220, 215, 0.5);
   color: var(--text-secondary);
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
 }
-.ds-table tbody tr:hover { background: var(--surface-2); }
+.ds-table tbody tr { transition: background-color 0.12s ease; }
+.ds-table tbody tr:hover { background: rgba(236, 236, 232, 0.6); }
 .ds-table tbody tr.clickable { cursor: pointer; }
 .ds-table tfoot {
   background: var(--accent-soft);
   border-top: 2px solid var(--accent);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-bold);
 }
-.ds-table tfoot td { color: var(--text-primary); }
+.ds-table tfoot td {
+  color: var(--text-primary);
+  padding: 14px 16px;
+}
 
 /* ── Buttons (표준: primary=레드 채움, secondary=테두리, ghost=텍스트, danger=테두리형) ── */
 .ds-btn {
@@ -622,14 +639,39 @@ input[type="file"]::file-selector-button:hover {
   background: var(--border);
 }
 
+/* ── Page Header ── */
+.ds-page-header {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* ── Section spacing ── */
+.ds-section-gap { margin-bottom: 24px; }
+
 /* ── Mobile card ── */
 .ds-mobile-card {
   background: var(--surface);
   border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
 }
+.ds-mobile-card:active {
+  transform: scale(0.995);
+}
+.ds-mobile-card--positive { border-left-color: var(--st-ok); }
+.ds-mobile-card--negative { border-left-color: var(--st-danger); }
+.ds-mobile-card--neutral  { border-left-color: var(--text-muted); }
 
 /* ── Utility ── */
 .ds-mono { font-family: var(--font-mono) !important; }
@@ -645,11 +687,14 @@ input[type="file"]::file-selector-button:hover {
 /* ── Responsive (모바일 ≤767 / 태블릿 768–1023 / 데스크톱 1024+) ── */
 @media (max-width: 767px) {
   :root { font-size: 13px; }
-  .ds-nav-inner { padding: 0 12px; height: 48px; }
-  .ds-main { padding: 12px 12px 32px; }
+  .ds-nav-inner { padding: 0 12px; height: 50px; }
+  .ds-main { padding: 16px 12px 32px; }
   .ds-nav-brand { font-size: var(--fs-body); }
   .ds-nav-links a { padding: 6px 10px; font-size: var(--fs-caption); }
+  .ds-kpi { padding: 16px 18px; }
   .ds-kpi-value { font-size: var(--fs-heading); }
+  .ds-page-header { padding: 16px; }
+  .ds-section-gap { margin-bottom: 16px; }
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -692,3 +737,8 @@ input[type="file"]::file-selector-button:hover {
 /* ── Hover utilities ── */
 .hover\:bg-surface-2:hover { background-color: var(--surface-2) !important; }
 .hover\:text-ink:hover     { color: var(--text-primary) !important; }
+
+/* ── Card accent bar modifier ── */
+.ds-card--accent-left {
+  border-left: 4px solid var(--accent);
+}

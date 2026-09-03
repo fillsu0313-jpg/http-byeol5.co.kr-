@@ -11,7 +11,7 @@
 </div>
 
 {# ── 상품 기본 정보 ── #}
-<div class="ds-card mb-5">
+<div class="ds-card ds-card--accent-left mb-5">
     <div class="ds-card-body">
         <div class="flex items-start justify-between">
             <div>
@@ -60,7 +60,7 @@
 
 {% if daily %}
 {# ── 요약 카드 ── #}
-<div class="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 ds-section-gap">
     {% set ns = namespace(total_profit=0, total_units=0, total_ad_spend=0, total_ad_units=0, total_organic=0, days=0) %}
     {% for d in daily %}
         {% if d.net_profit is not none %}{% set ns.total_profit = ns.total_profit + d.net_profit %}{% endif %}

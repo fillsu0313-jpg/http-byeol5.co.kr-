@@ -3,9 +3,10 @@
 쿠팡 광고센터에 공개 API가 없으므로 수동 다운로드한 엑셀을 파싱.
 
 엑셀 구조 (캠페인 > 광고그룹 > 상품 일별):
-  날짜 | ... | 광고집행 옵션ID | ... | 노출수 | 클릭수 | 광고비 | ... | 총 판매수량(14일) | ...
+  날짜 | ... | 광고집행 옵션ID | ... | 노출수 | 클릭수 | 광고비 | ... | 총 판매수량(1일) | ...
 
 같은 (날짜, 옵션ID)에 검색/비검색 등 여러 행이 있으므로 합산.
+순이익 공식이 일별 기준이므로 14일이 아닌 1일 판매수량 사용.
 """
 import sqlite3
 from collections import defaultdict
@@ -52,13 +53,24 @@ def parse_ad_report(file_path: str) -> dict:
             col_map["clicks"] = i
         elif h == "광고비":
             col_map["spend"] = i
-        elif h == "총 판매수량(14일)":
-            col_map["units_14d"] = i
+        elif h == "총 판매수량(1일)":
+            col_map["units_1d"] = i
 
+    # 컬럼 인덱스 폴백 (헤더 매칭 실패 시 알려진 고정 위치 사용)
+    FALLBACK_COLS = {
+        "date": 0, "vid": 8, "impressions": 13,
+        "clicks": 14, "spend": 15, "units_1d": 20,
+    }
     missing = {"date", "vid", "impressions", "clicks", "spend"} - set(col_map.keys())
     if missing:
-        warnings.append(f"필수 컬럼 누락: {missing}. 헤더: {header[:10]}")
-        return {"rows": [], "warnings": warnings}
+        if len(header) >= 21:
+            warnings.append(f"헤더 매칭 실패, 컬럼 인덱스 폴백 사용: {missing}")
+            for key in list(missing) + (["units_1d"] if "units_1d" not in col_map else []):
+                col_map[key] = FALLBACK_COLS[key]
+            missing = set()
+        else:
+            warnings.append(f"필수 컬럼 누락: {missing}. 헤더: {header[:10]}")
+            return {"rows": [], "warnings": warnings}
 
     # (날짜, 옵션ID) 기준 합산
     agg = defaultdict(lambda: {"impressions": 0, "ad_clicks": 0, "ad_spend": 0.0, "ad_units": 0})
@@ -89,8 +101,8 @@ def parse_ad_report(file_path: str) -> dict:
         agg[key]["impressions"] += int(_parse_num(row[col_map["impressions"]]))
         agg[key]["ad_clicks"] += int(_parse_num(row[col_map["clicks"]]))
         agg[key]["ad_spend"] += _parse_num(row[col_map["spend"]])
-        if "units_14d" in col_map:
-            agg[key]["ad_units"] += int(_parse_num(row[col_map["units_14d"]]))
+        if "units_1d" in col_map:
+            agg[key]["ad_units"] += int(_parse_num(row[col_map["units_1d"]]))
 
     if skipped:
         warnings.append(f"건너뛴 행: {skipped}개")
