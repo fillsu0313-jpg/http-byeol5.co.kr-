@@ -123,18 +123,29 @@ def parse_ad_report(file_path: str) -> dict:
 
 
 def save_ad_data(rows: list[dict]) -> dict:
-    """파싱된 광고 데이터 → daily_ads INSERT OR REPLACE"""
-    result = {"inserted": 0, "skipped": 0, "errors": []}
+    """파싱된 광고 데이터 → daily_ads INSERT OR REPLACE.
+    광고 보고서의 옵션ID는 RG vendorItemId이므로 MP vendorItemId로 변환."""
+    result = {"inserted": 0, "skipped": 0, "rg_converted": 0, "errors": []}
 
     with get_db() as conn:
+        # RG→MP 매핑 로드
+        rg_to_mp = dict(conn.execute(
+            "SELECT rg_vendor_item_id, vendor_item_id FROM products WHERE rg_vendor_item_id IS NOT NULL"
+        ).fetchall())
+
         for row in rows:
+            vid = row["vendor_item_id"]
+            if vid in rg_to_mp:
+                vid = rg_to_mp[vid]
+                result["rg_converted"] += 1
+
             conn.execute(
                 """INSERT OR REPLACE INTO daily_ads
                    (stat_date, vendor_item_id, impressions, ad_clicks, ad_units, ad_spend, source)
                    VALUES (?, ?, ?, ?, ?, ?, 'upload')""",
                 (
                     row["stat_date"],
-                    row["vendor_item_id"],
+                    vid,
                     row["impressions"],
                     row["ad_clicks"],
                     row["ad_units"],

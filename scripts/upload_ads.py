@@ -152,11 +152,21 @@ def upload(filepath: str, dry_run: bool = False):
         print(f"\n[DRY RUN] DB 변경 없음.")
         return
 
-    # DB 저장
+    # DB 저장 (RG vid → MP vid 변환)
     inserted = 0
     updated = 0
     with get_db() as conn:
+        # RG→MP 매핑 로드
+        rg_to_mp = dict(conn.execute(
+            "SELECT rg_vendor_item_id, vendor_item_id FROM products WHERE rg_vendor_item_id IS NOT NULL"
+        ).fetchall())
+        rg_converted = 0
+
         for (stat_date, vid), d in daily.items():
+            # 광고 보고서의 옵션ID는 RG vendorItemId → MP vendorItemId로 변환
+            if vid in rg_to_mp:
+                vid = rg_to_mp[vid]
+                rg_converted += 1
             existing = conn.execute(
                 "SELECT 1 FROM daily_ads WHERE stat_date = ? AND vendor_item_id = ?",
                 (stat_date, vid),
@@ -191,6 +201,7 @@ def upload(filepath: str, dry_run: bool = False):
     print(f"\n=== 완료 ===")
     print(f"  신규: {inserted}건")
     print(f"  업데이트: {updated}건")
+    print(f"  RG→MP 변환: {rg_converted}건")
 
 
 def main():
