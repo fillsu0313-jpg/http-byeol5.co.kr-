@@ -1207,72 +1207,94 @@ input[type="file"]::file-selector-button:hover {
    기간별 분석 — 캘린더 + 랭킹
    ═══════════════════════════════════════════════════════════════ */
 
+/* 캘린더 래퍼 */
 .period-calendar-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 .period-calendar {
-  min-width: 560px;
+  min-width: 600px;
 }
-.period-cal-header {
+
+/* 요일 헤더 */
+.period-cal-header,
+.period-cal-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
+  gap: 8px;
+}
+.period-cal-header {
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
 }
 .period-cal-hdr {
   text-align: center;
   font-size: 12px;
   font-weight: 700;
   color: var(--text-muted);
-  padding: 4px 0;
+  text-transform: uppercase;
+  letter-spacing: .5px;
 }
 .period-cal-row {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
+
+/* 셀 — 흰 배경 + 얇은 border (ds-card와 동일한 톤) */
 .period-cal-cell {
-  background: var(--surface-2);
-  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px 6px;
-  min-height: 72px;
+  padding: 10px 8px;
+  min-height: 80px;
   transition: border-color .15s, box-shadow .15s;
+  display: flex;
+  flex-direction: column;
 }
 .period-cal-cell:hover:not(.period-cal-out) {
   border-color: var(--border-strong);
-  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  box-shadow: 0 2px 6px rgba(0,0,0,.06);
 }
+
+/* 오늘 */
 .period-cal-today {
   border: 2px solid var(--accent) !important;
   background: var(--accent-soft);
 }
+
+/* 범위 밖 날짜 */
 .period-cal-out {
-  opacity: .35;
+  background: var(--surface-2);
+  opacity: .3;
 }
+
+/* 날짜 */
 .period-cal-date {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 4px;
-  font-variant-numeric: tabular-nums;
-}
-.period-cal-profit {
-  font-size: 13px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.3;
-}
-.period-cal-units {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
+  margin-bottom: auto;
   font-variant-numeric: tabular-nums;
 }
 
-/* 랭킹 그리드 */
+/* 순이익 (축약 숫자) */
+.period-cal-profit {
+  font-size: 14px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.3;
+  margin-top: 4px;
+}
+
+/* 판매량 */
+.period-cal-units {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 랭킹 2열 그리드 */
 .period-ranking-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1280,14 +1302,32 @@ input[type="file"]::file-selector-button:hover {
   margin-top: 16px;
 }
 
+/* 랭킹 메달 */
+.period-rank-medal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.period-rank-medal--gold   { background: #FFF3CD; color: #856404; }
+.period-rank-medal--silver { background: #E8E8E4; color: #585958; }
+.period-rank-medal--bronze { background: #FFE5D5; color: #9C4221; }
+
 @media (max-width: 1023px) {
   .period-ranking-grid {
     grid-template-columns: 1fr;
   }
   .period-cal-cell {
-    min-height: 60px;
-    padding: 6px 4px;
+    min-height: 64px;
+    padding: 8px 6px;
   }
   .period-cal-profit { font-size: 12px; }
-  .period-cal-units { font-size: 10px; }
+  .period-cal-units  { font-size: 10px; }
+  .period-cal-header,
+  .period-cal-row { gap: 4px; }
 }

@@ -33,7 +33,22 @@ def fmt_number(value):
     return f"{value:,}"
 
 
+def fmt_short(value):
+    """축약 숫자. 1만 이상이면 '만' 단위, 1천 이상이면 '천' 단위."""
+    if value is None:
+        return "-"
+    v = round(value)
+    abs_v = abs(v)
+    sign = "-" if v < 0 else "+"
+    if abs_v >= 10000:
+        return f"{sign}{abs_v // 10000}만"
+    if abs_v >= 1000:
+        return f"{sign}{abs_v // 1000}천"
+    return f"{sign}{abs_v:,}"
+
+
 templates.env.filters["fmt"] = fmt_number
+templates.env.filters["fmt_short"] = fmt_short
 
 
 # ──────────────── 페이지 라우트 ────────────────
